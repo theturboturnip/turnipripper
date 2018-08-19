@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import lib
+import libturnipripper as lib
 import os
 
 vgmdb_server = lib.CDDBServer("http://vgmdb.net/~cddb", lib.CDDBDTitlePattern(artist_index = 2, album_index = 1))
