@@ -90,8 +90,11 @@ def get_cd_info(cddb_interface, disc_info = None, cddb_cd_info = None):
 
 def ripped_track_filename(index):
     return "track{0:02d}.cdda.wav".format(index + 1)
-
+def create_directory(path):
+    if not os.path.isdir(path):
+        os.makedirs(path)
 def rip(cd_info, source_directory = "./"):
+    create_directory(source_directory)
     def rip_span(span_str):
         subprocess.run(["cdparanoia", "-B", span_str], check=True, cwd=source_directory)
     
@@ -110,14 +113,17 @@ def rip(cd_info, source_directory = "./"):
             last_downloaded_index = i
     if last_downloaded_index != len(cd_info.tracks) - 1:
         rip_span(str(last_downloaded_index + 1 + 1) + "-" + str(len(cd_info.tracks)))
-def transcode_with_metadata(cd_info, source_directory = "./source/", output_directory = "./", ffmpeg = "ffmpeg", output_format = "flac", extra_options = [], output_ext = None):
+def transcode_with_metadata(cd_info, source_directory, output_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None):
+    create_directory(source_directory)
+    create_directory(output_directory)
     if output_ext == None:
         output_ext = output_format
     ffmpeg_command = ["ffmpeg", "-i", "{input_filename}", "-c:a", output_format,
                       *extra_options,
-                      "-metadata", "title=\"{title}\"",
-                      "-metadata", "artist=\"{artist}\"",
-                      "-metadata", "album=\"{album}\"",
+                      "-metadata", "title={title}",
+                      "-metadata", "artist={artist}",
+                      "-metadata", "album={album}",
+                      "-metadata", "track={track}/{track_count}",
                       "-y",
                       "{output_filename}"]
     output_filename_format = "{index:02d} - {title}.{output_ext}"
@@ -134,6 +140,13 @@ def transcode_with_metadata(cd_info, source_directory = "./source/", output_dire
                                               title = cd_info.tracks[i],
                                               artist = cd_info.artist,
                                               album = cd_info.title,
-                                              output_filename = output_filename)
+                                              output_filename = output_filename,
+                                              track = i + 1,
+                                              track_count = len(cd_info.tracks))
                                      for x in ffmpeg_command]
         subprocess.run(translated_ffmpeg_command, check=True)
+def rip_and_transcode(cd_info, source_root_directory, output_root_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None):
+    source_directory = os.path.join(source_root_directory, cd_info.id)
+    output_directory = os.path.join(output_root_directory, cd_info.artist, cd_info.title)
+    rip(cd_info, source_directory)
+    transcode_with_metadata(cd_info, source_directory, output_directory, output_format, ffmpeg, extra_options, output_ext)
