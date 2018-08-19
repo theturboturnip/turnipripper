@@ -4,6 +4,7 @@ import subprocess
 import urllib
 import CDDB
 import re
+import os.path
 
 class DiscInfo:
     def __init__(self, id, track_lengths, total_length_seconds):
@@ -16,6 +17,7 @@ class DiscInfo:
 class CDInfo:
     def __init__(self, title_pattern, disc_info, cddb_track_info):
         split_name = cddb_track_info["DTITLE"].split(" / ")
+        self.id = cddb_track_info["DISCID"]
         self.title = split_name[title_pattern.album_index]
         self.artist = split_name[title_pattern.artist_index]
         self.tracks = []
@@ -86,7 +88,52 @@ def get_cd_info(cddb_interface, disc_info = None, cddb_cd_info = None):
         cddb_cd_info = get_cddb_cd_info(cddb_interface, disc_info)
     return cddb_interface.read(disc_info, cddb_cd_info)
 
+def ripped_track_filename(index):
+    return "track{0:02d}.cdda.wav".format(index + 1)
 
-def rip(cd_info):
-    subprocess.check_call(["cdparanoia", "-B"])
-    pass
+def rip(cd_info, source_directory = "./"):
+    def rip_span(span_str):
+        subprocess.run(["cdparanoia", "-B", span_str], check=True, cwd=source_directory)
+    
+    filenames = os.listdir(source_directory)
+    #track_is_downloaded = [False] * len(cd_info.tracks)
+    last_downloaded_index = -1
+    for i in range(len(cd_info.tracks)):
+        if ripped_track_filename(i) in filenames:
+            #track_is_downloaded[i] = True
+            if last_downloaded_index + 1 != i:
+                # Download the tracks that haven't been installed yet
+                span_to_rip = str(last_downloaded_index + 1 + 1)
+                if (i - 1) > last_downloaded_index + 1:
+                    span_to_rip += "-" + str(i - 1 + 1)
+                rip_span(span_to_rip)
+            last_downloaded_index = i
+    if last_downloaded_index != len(cd_info.tracks) - 1:
+        rip_span(str(last_downloaded_index + 1 + 1) + "-" + str(len(cd_info.tracks)))
+def transcode_with_metadata(cd_info, source_directory = "./source/", output_directory = "./", ffmpeg = "ffmpeg", output_format = "flac", extra_options = [], output_ext = None):
+    if output_ext == None:
+        output_ext = output_format
+    ffmpeg_command = ["ffmpeg", "-i", "{input_filename}", "-c:a", output_format,
+                      *extra_options,
+                      "-metadata", "title=\"{title}\"",
+                      "-metadata", "artist=\"{artist}\"",
+                      "-metadata", "album=\"{album}\"",
+                      "-y",
+                      "{output_filename}"]
+    output_filename_format = "{index:02d} - {title}.{output_ext}"
+    for i in range(len(cd_info.tracks)):
+        input_filename = os.path.join(source_directory, ripped_track_filename(i))
+        if not os.path.isfile(input_filename):
+            raise RuntimeError("Couldn't find file " + input_filename)
+        output_filename = os.path.join(output_directory, output_filename_format.format(
+            title = cd_info.tracks[i],
+            index = i+1,
+            output_ext = output_ext
+        ))
+        translated_ffmpeg_command = [x.format(input_filename = input_filename,
+                                              title = cd_info.tracks[i],
+                                              artist = cd_info.artist,
+                                              album = cd_info.title,
+                                              output_filename = output_filename)
+                                     for x in ffmpeg_command]
+        subprocess.run(translated_ffmpeg_command, check=True)
