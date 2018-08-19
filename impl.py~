@@ -1,0 +1,3 @@
+import lib
+
+cddb_interface = CDDBInterface(*
