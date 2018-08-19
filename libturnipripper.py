@@ -27,7 +27,7 @@ class CDInfo:
             self.tracks.append(cddb_track_info["TTITLE" + str(i)])
 
     def __str__(self):
-        return "Album: {}\nArtist: {}\nTrack Names: {}\n".format(self.title, self.artist, self.tracks.join("\n"))
+        return "Album: {}\nArtist: {}\nTrack Names: \n\t{}\n".format(self.title, self.artist, "\n\t".join(self.tracks))
 
 # CDDB Classes
 class CDDBDTitlePattern:
@@ -132,7 +132,7 @@ def rip(cd_info, source_directory):
     def rip_span(rip_span_start, rip_span_end):
         """ Rips a zero-indexed, inclusive set of tracks from the CD. """
         # CDParanoia takes 1-indexed track indices.
-        if rip_span_staed == rip_span_end:
+        if rip_span_start == rip_span_end:
             span_str = str(rip_span_start + 1)
         else:
             span_str = "{}-{}".format(rip_span_start + 1, rip_span_end + 1)
@@ -153,7 +153,7 @@ def rip(cd_info, source_directory):
             rip_span(last_ripped_index + 1, i - 1)
         last_ripped_index = i
     # If there are still tracks left to be ripped, rip them.
-    if last_downloaded_index != len(cd_info.tracks) - 1:
+    if last_ripped_index != len(cd_info.tracks) - 1:
         rip_span(last_downloaded_index + 1, len(cd_info.tracks) - 1)
 def transcode_with_metadata(cd_info, source_directory, output_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None):
     """
