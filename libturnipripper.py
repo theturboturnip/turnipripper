@@ -95,6 +95,7 @@ def get_cddb_cd_info(cddb_interface, disc_info):
         i = 0
         for option in available_options:
             print("%d: %s" % (i, available_options[i]["title"]))
+            i += 1
         selection = None
         while selection == None or selection >= len(available_options) or selection < 0:
             try:
@@ -102,7 +103,7 @@ def get_cddb_cd_info(cddb_interface, disc_info):
             except Exception:
                 print('\r', end='')
                 pass
-        return available_options[i]
+        return available_options[selection]
     else:
         return None
 def get_cd_info(cddb_interface):
@@ -154,14 +155,13 @@ def rip(cd_info, source_directory):
         last_ripped_index = i
     # If there are still tracks left to be ripped, rip them.
     if last_ripped_index != len(cd_info.tracks) - 1:
-        rip_span(last_downloaded_index + 1, len(cd_info.tracks) - 1)
+        rip_span(last_ripped_index + 1, len(cd_info.tracks) - 1)
 def transcode_with_metadata(cd_info, source_directory, output_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None):
     """
     Takes all tracks that have been ripped from the source_directory, and converts them to the given format.
     Also attaches the correct metadata based on the CDInfo.
     Tracks are saved in the output_directory. Like rip(), no subfolders are created.
     """
-    create_directory(output_directory)
     if output_ext == None:
         output_ext = output_format
     ffmpeg_command = ["ffmpeg", "-i", "{input_filename}", "-c:a", output_format,
@@ -196,6 +196,8 @@ def rip_and_transcode(cd_info, source_root_directory, output_root_directory, out
     Combines rip() and transcode_with_metadata() into a single function.
     """
     source_directory = os.path.join(source_root_directory, cd_info.id)
+    create_directory(source_directory)
     output_directory = os.path.join(output_root_directory, cd_info.artist, cd_info.title)
+    create_directory(output_directory)
     rip(cd_info, source_directory)
     transcode_with_metadata(cd_info, source_directory, output_directory, output_format, ffmpeg, extra_options, output_ext)
