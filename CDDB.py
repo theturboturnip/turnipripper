@@ -72,14 +72,14 @@ def query(track_info, server_url=default_server,
         result = []
 
         for line in response.readlines():
-            line = string.rstrip(line)
+            line = decode_string(line, expected_output_encodings).rstrip()
 
             if line == '.':             # end of matches
                 break
                 # otherwise:
                 # split into 3 pieces, not 4
                 # (thanks to bgp for the fix!)
-            match = string.split(line, ' ', 2)
+            match = line.split(' ', 2)
 
             result.append({'category': match[0], 'disc_id': match[1], 'title':
                            match[2]})

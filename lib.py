@@ -63,12 +63,14 @@ def get_cddb_cd_info(cddb_interface, disc_info = None):
     if header == 200:
         return available_options
     elif header == 210 or header == 211:
+        if len(available_options) == 1:
+            return available_options[0]
         print("Choices:")
         i = 0
         for option in available_options:
             print("%d: %s" % (i, available_options[i]["title"]))
         selection = None
-        while selection == None or selection >= len(available_options):
+        while selection == None or selection >= len(available_options) or selection < 0:
             try:
                 selection = int(input("Selection: "))
             except Exception:
