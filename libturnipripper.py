@@ -64,9 +64,9 @@ class CDDBInterface:
         self.user = user
         self.host = host
     def query(self, disc_info):
-        return CDDB.query(disc_info.as_CDDB_track_info(), self.server.address, self.user, self.host, self.client_name, self.client_version, expected_output_encodings=["utf8", "shift-jis"])
+        return CDDB.query(disc_info.as_CDDB_track_info(), self.server.address, self.user, self.host, self.client_name, self.client_version, expected_output_encodings=["shift-jis", "euc-jp", "utf8"])
     def read_cddb_track_info(self, cddb_cd_info):
-        return CDDB.read(cddb_cd_info["category"], cddb_cd_info["disc_id"], self.server.address, self.user, self.host, self.client_name, self.client_version, expected_output_encodings=["utf8", "shift-jis"])[1]
+        return CDDB.read(cddb_cd_info["category"], cddb_cd_info["disc_id"], self.server.address, self.user, self.host, self.client_name, self.client_version, expected_output_encodings=["shift-jis", "euc-jp", "utf8"])[1]
     def read(self, disc_info, cddb_cd_info):
         return CDInfo(self.server.dtitle_pattern, disc_info, self.read_cddb_track_info(cddb_cd_info))
 
@@ -105,7 +105,7 @@ def get_cddb_cd_info(cddb_interface, disc_info):
                 pass
         return available_options[selection]
     else:
-        return None
+        raise RuntimeError("Couldn't find data for CD")
 def get_cd_info(cddb_interface):
     """
     Returns the CDInfo for the CD in the disc drive.
@@ -118,8 +118,10 @@ def get_cd_info(cddb_interface):
 def ripped_track_filename(index):
     """ 
     Converts an array index (starting at 0) into the corresponding
-    output filename of a track ripped by CDParanoia
+    output filename of a track that the program rips
     """
+    return "track{0:02d}.flac".format(index + 1)
+def cdparanoia_source_ripped_track_filename(index):
     return "track{0:02d}.cdda.wav".format(index + 1)
 def create_directory(path):
     """ Creates the directory and all parent directories in the path, if they don't already exist. """
@@ -137,8 +139,22 @@ def rip(cd_info, source_directory):
             span_str = str(rip_span_start + 1)
         else:
             span_str = "{}-{}".format(rip_span_start + 1, rip_span_end + 1)
-        subprocess.run(["cdparanoia", "-B", span_str], check=True, cwd=source_directory)
-    
+        subprocess.run(["cdparanoia", "-B", "--output-wav", span_str], check=True, cwd=source_directory)
+        
+        wav_files = []
+        tracks = range(rip_span_start, rip_span_end + 1)
+        for i in tracks: # Inclusive range, range() returns exclusive at the end
+            wav_files.append(cdparanoia_source_ripped_track_filename(i))
+        # Transcode the WAVs to FLACs with the metadata
+        transcode_with_metadata(cd_info,
+                                source_directory, source_directory,
+                                "flac", extra_options = ["-compression_level", "12"],
+                                input_filename_generator = cdparanoia_source_ripped_track_filename,
+                                output_filename_format = "track{track:02d}.flac",
+                                tracks = tracks)
+        for wav_file in wav_files:
+            os.remove(os.path.join(source_directory, wav_file))
+        
     filenames = os.listdir(source_directory)
     last_ripped_index = -1
     for i in range(len(cd_info.tracks)):
@@ -156,7 +172,7 @@ def rip(cd_info, source_directory):
     # If there are still tracks left to be ripped, rip them.
     if last_ripped_index != len(cd_info.tracks) - 1:
         rip_span(last_ripped_index + 1, len(cd_info.tracks) - 1)
-def transcode_with_metadata(cd_info, source_directory, output_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None):
+def transcode_with_metadata(cd_info, source_directory, output_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None, input_filename_generator = ripped_track_filename, output_filename_format = "{track:02d} - {title}.{output_ext}", tracks = []):
     """
     Takes all tracks that have been ripped from the source_directory, and converts them to the given format.
     Also attaches the correct metadata based on the CDInfo.
@@ -172,9 +188,11 @@ def transcode_with_metadata(cd_info, source_directory, output_directory, output_
                       "-metadata", "track={track}/{track_count}",
                       "-y",
                       "{output_filename}"]
-    output_filename_format = "{track:02d} - {title}.{output_ext}"
-    for i in range(len(cd_info.tracks)):
-        input_filename = os.path.join(source_directory, ripped_track_filename(i))
+    if tracks == []:
+        tracks = range(len(cd_info.tracks))
+        
+    for i in tracks:
+        input_filename = os.path.join(source_directory, input_filename_generator(i))
         if not os.path.isfile(input_filename):
             raise RuntimeError("Couldn't find file " + input_filename)
         output_filename = os.path.join(output_directory, output_filename_format.format(

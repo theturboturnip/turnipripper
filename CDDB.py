@@ -15,6 +15,7 @@ import socket
 import os
 import struct
 import re
+import chardet
 
 name = 'CDDB.py'
 version = 1.4
@@ -35,6 +36,7 @@ def decode_string(bytestr, encodings):
             return bytestr.decode(encoding)
         except UnicodeDecodeError as err:
             exception = err
+    print(bytestr)
     raise exception
 
 def query(track_info, server_url=default_server,
