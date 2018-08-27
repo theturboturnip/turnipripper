@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+
+import libturnipripper.CDDB
+import libturnipripper.data
+import libturnipripper.ripping
+import configparser
+import argparse
+
+def y_n_input(query):
+    while True:
+        answer = input("{} y/n: ".format(query)).strip().lower()
+        if answer[0] == 'y':
+            return True
+        elif answer[0] == 'n':
+            return False
+        print("Invalid Input")
+def number_range_input(query, range_min = 0, range_max = -1):
+    while True:
+        if (range_max > 0):
+            answer = input("{0} {1}-{2}: ".format(query, range_min, range_max))
+        elif (range_min >= 0):
+            answer = input("{0} {1}+: ".format(query, range_min))
+        else:
+            answer = input("{0} (numeric): ".format(query))
+        try:
+            int_answer = int(answer)
+        except ValueError:
+            print("Invalid Input (Not an integer)")
+            continue
+        if range_max > 0 and int_answer > range_max:
+            print("Invalid Input (Too Large)")
+            continue
+        elif range_min >= 0 and int_answer < range_min:
+            print("Invalid Input (Too Small)")
+            continue
+        return int_answer
+            
+            
+def select_cd_info_with_user_input(cddb_interfaces):
+    disc_info = libturnipripper.data.get_disc_info()
+
+    # Array of arrays of data.CDInfo. known_definitions[X][Y] is the Xth interface's Yth definition for this CD.
+    known_definitions = []
+
+    def select_cd_from_definition(definition_list, zero_action):
+        print("0 to {}".format(zero_action))
+        for (index, cd_info) in enumerate(definition_list):
+            print("{0:d}: {1}".format(index + 1, cd_info.title))
+        while True:
+            selected_cd = number_range_input("", 0, len(definition_list))
+            if selected_cd == 0:
+                return False
+            print(definition_list[selected_cd - 1])
+            if y_n_input("Confirm Selection"):
+                return definition_list[selected_cd - 1]
+    
+    def select_known_cd_definition():
+        while True:
+            selected_server = number_range_input("Server (0 to cancel)", 0, len(known_definitions))
+            if selected_server == 0:
+                return False
+            definition_list = known_definitions[selected_server - 1]
+            len_definition_list = len(definition_list)
+            if definition_list == None or len_definition_list == 0:
+                print("That server has no definitions!")
+                continue
+            print("Select CD")
+            selected_definition = select_cd_from_definition(definition_list, zero_action="cancel")
+            if not selected_definition:
+                continue
+            return selected_definition
+    
+    base_definition = None
+    for (index, cddb_interface) in enumerate(cddb_interfaces):
+        print ("Querying CD definitions from {}...".format(cddb_interface.server.address))
+        known_definitions.append(libturnipripper.CDDB.get_cd_info(cddb_interface, disc_info))
+        if known_definitions[index] == None or len(known_definitions[index]) == 0:
+            print("No definitions for CD ID {0} on {1}, searching next server...".format(disc_info.id, cddb_interface.server.address))
+            continue
+        elif len(known_definitions[index]) == 1:
+            print("Found definition from {}:".format(cddb_interface.server.address))
+            print(known_definitions[index][0])
+            if y_n_input("Use this definition as a base?"):
+                base_definition = known_definitions[index][0]
+                break
+        else:
+            print("Found {} definitions from {}:".format(len(known_definitions[index]), cddb_interface.server.address))
+            selected_definition = select_cd_from_definition(known_definitions[index], zero_action="select none")
+            if selected_definition:
+                base_definition = selected_definition
+                break
+
+        if index > 0 and y_n_input("Select a previous definition?"):
+            base_definition = select_known_cd_definition()
+            break
+    if base_definition == None:
+        print("Select a definition")
+        base_definition = select_known_cd_definition()
+        if base_definition:
+            print(base_definition)
+            return base_definition
+        return False
+    else:
+        return base_definition
+    
+def main():
+    # Parse any conf_file specification
+    # We make this parser with add_help=False so that
+    # it doesn't parse -h and print help.
+    conf_parser = argparse.ArgumentParser(
+        description=__doc__, # printed with -h/--help
+        # Don't mess with format of description
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        # Turn off help, so we print all options in response to -h
+        add_help=False
+    )
+    conf_parser.add_argument("-c", "--config_file",
+                             help="Specify config file", metavar="FILE")
+    args, remaining_argv = conf_parser.parse_known_args()
+
+    defaults = { "option":"default" }
+    
+    config_files = ["~/.turnipripper", "./.turnipripper"]
+    if args.config_file:
+        config_files.append(args.conf_file)
+    config = configparser.SafeConfigParser()
+    config.read(config_files)
+    defaults.update(dict(config.items("DEFAULT")))
+
+    # Parse rest of arguments
+    # Don't suppress add_help here so it will handle -h
+    parser = argparse.ArgumentParser(
+        # Inherit options from config_parser
+        parents=[conf_parser],
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+    parser.set_defaults(**defaults)
+    parser.add_argument("-s", "--server_config_file", action="append", default=[],
+                             help="Add a server config file", metavar="FILE")
+    parser.add_argument("-p", "--protocol", type=int, default=6,
+                             help="Set the CDDB protocol.")
+    parser.add_argument("-u", "--username", type=str, default="anon",
+                             help="Set the username used to connect to CDDB servers")
+    parser.add_argument("-srcroot", "--source_root_folder", type=str, default="./source/",
+                             help="Set the folder used to store the source files for ripped CDs (stored as FLAC)")
+    parser.add_argument("-libroot", "--library_root_folder", type=str, default="./library/",
+                             help="Set the folder used to store converted files")
+    parser.add_argument("-of", "--output_format", type=str, default="none",
+                             help="Set the output format of converted files. Set to 'none' to disable transcoding")
+    parser.add_argument("-oext", "--output_extension", type=str,
+                             help="Set the extension given to converted files. Defaults to the format of the file, but can be changed for codecs like OGG Vorbis/Opus")
+    parser.add_argument("--ffmpeg", type=str, default="ffmpeg",
+                             help="Set the location of the ffmpeg binary")
+    parser.add_argument("-fargs", "--ffmpeg_args", type=str, action="append", default=[],
+                             help="Set any extra arguments for the ffmpeg transcoding. Can be used to set quality level or similar")
+    args = parser.parse_args(remaining_argv)
+
+    server_config_files = args.server_config_file
+    server_config_parser = configparser.SafeConfigParser()
+    server_config_parser["DEFAULT"] = {
+        "DTitleArtistIndex": 1,
+        "DTitleAlbumIndex": 2,
+        "TitleRegex": r"(?P<Title>.*)",
+        "Encoding": "utf8",
+    }
+    server_config_parser.read(server_config_files)
+    servers = []
+    for server_address in server_config_parser.sections():
+        server_encodings = [server_config_parser[server_address]["Encoding"]]
+        if server_encodings[0].lower() not in ["utf8", "utf-8"]:
+            server_encodings.append("utf8")
+        servers.append(libturnipripper.CDDB.Server(
+            server_address,
+            libturnipripper.CDDB.DTitlePattern(
+                artist_index = int(server_config_parser[server_address]["DTitleArtistIndex"]),
+                album_index = int(server_config_parser[server_address]["DTitleAlbumIndex"])
+            ),
+            server_encodings
+        ))
+    if len(servers) == 0:
+        print("No servers specified, defaulting to FreeDB...")
+    # FreeDB is always used as a fallback, but we tell the user if they haven't specified 
+    servers.append(libturnipripper.CDDB.Server("http://freedb.freedb.org/~cddb/cddb.cgi"))
+
+    cddb_interfaces = [libturnipripper.CDDB.Interface(server, args.protocol, args.username, "host") for server in servers]
+    cd_info = select_cd_info_with_user_input(cddb_interfaces)
+    if not cd_info:
+        return
+    if args.output_format == "none" or args.output_format == None:
+        print ("Transcoding disabled, only ripping")
+        libturnipripper.ripping.rip_to_subdir(cd_info, args.source_root_folder, args.ffmpeg)
+    else:
+        print("Ripping and transcoding to {}".format(args.output_format))
+        libturnipripper.ripping.rip_and_transcode(cd_info, args.source_root_folder, args.library_root_folder, args.output_format, ffmpeg=args.ffmpeg, extra_options=args.ffmpeg_args, output_ext = args.output_extension)
+        
+if __name__ == "__main__":
+    main()
+    
+#vgmdb_server = libturnipripper.CDDB.Server("http://vgmdb.net/~cddb", libturnipripper.CDDB.DTitlePattern(artist_index = 2, album_index = 1))
+#normal_server = libturnipripper.CDDB.Server("http://freedb.freedb.org/~cddb/cddb.cgi")
+#cddb_interface = libturnipripper.CDDB.Interface(vgmdb_server, 6, "samuel", "host")
+#cd_info = libturnipripper.CDDB.get_cd_info(cddb_interface)
+
+#print(cd_info)
+#SOURCE_ROOT = "./test/source"
+#LIBRARY_ROOT = "./test/library"
+#libturnipripper.ripping.rip_and_transcode(cd_info, SOURCE_ROOT, LIBRARY_ROOT, "mp3")

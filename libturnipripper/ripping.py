@@ -15,7 +15,7 @@ def create_directory(path):
     """ Creates the directory and all parent directories in the path, if they don't already exist. """
     if not os.path.isdir(path):
         os.makedirs(path)
-def rip(cd_info, source_directory):
+def rip_directly(cd_info, source_directory, ffmpeg="ffmpeg"):
     """
     Rips all tracks from a CD that haven't been ripped yet.
     Stores them in source_directory. Will not create any subfolders for different albums.
@@ -34,20 +34,24 @@ def rip(cd_info, source_directory):
         for i in tracks: # Inclusive range, range() returns exclusive at the end
             wav_files.append(cdparanoia_source_ripped_track_filename(i))
         # Transcode the WAVs to FLACs with the metadata
-        transcode_with_metadata(cd_info,
+        transcode_with_metadata_directly(cd_info,
                                 source_directory, source_directory,
-                                "flac", extra_options = ["-compression_level", "12"],
+                                "flac",
+                                ffmpeg = ffmpeg,
+                                extra_options = ["-compression_level", "12"],
                                 input_filename_generator = cdparanoia_source_ripped_track_filename,
                                 output_filename_format = "track{track:02d}.flac",
-                                tracks = tracks)
+                                tracks = tracks,)
         for wav_file in wav_files:
             os.remove(os.path.join(source_directory, wav_file))
         
     filenames = os.listdir(source_directory)
     last_ripped_index = -1
+    tracks_that_were_ripped = []
     for i in range(len(cd_info.tracks)):
         if ripped_track_filename(i) not in filenames:
-            # This track hasn't been ripped.
+            # This track hasn't been ripped. It will be in the future
+            tracks_that_were_ripped.append(i)
             continue
         # This track has been ripped.
         # If the last track that we know was ripped wasn't the last one...
@@ -60,7 +64,8 @@ def rip(cd_info, source_directory):
     # If there are still tracks left to be ripped, rip them.
     if last_ripped_index != len(cd_info.tracks) - 1:
         rip_span(last_ripped_index + 1, len(cd_info.tracks) - 1)
-def transcode_with_metadata(cd_info, source_directory, output_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None, input_filename_generator = ripped_track_filename, output_filename_format = "{track:02d} - {title}.{output_ext}", tracks = []):
+    print("Ripped {0:d} tracks, {1:d} were already ripped".format(len(tracks_that_were_ripped), len(cd_info.tracks) - len(tracks_that_were_ripped)))
+def transcode_with_metadata_directly(cd_info, source_directory, output_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None, input_filename_generator = ripped_track_filename, output_filename_format = "{track:02d} - {title}.{output_ext}", tracks = []):
     """
     Takes all tracks that have been ripped from the source_directory, and converts them to the given format.
     Also attaches the correct metadata based on the CDInfo.
@@ -97,13 +102,19 @@ def transcode_with_metadata(cd_info, source_directory, output_directory, output_
                                               track_count = len(cd_info.tracks))
                                      for x in ffmpeg_command]
         subprocess.run(translated_ffmpeg_command, check=True)
+
+def rip_to_subdir(cd_info, source_root_directory, ffmpeg="ffmpeg"):
+    """
+    Wraps rip_directly to rip to a source directory within the root
+    """
+    source_directory = os.path.join(source_root_directory, cd_info.id)
+    create_directory(source_directory)
+    rip_directly(cd_info, source_directory, ffmpeg)
+    return source_directory
 def rip_and_transcode(cd_info, source_root_directory, output_root_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None):
     """
     Combines rip() and transcode_with_metadata() into a single function.
     """
-    source_directory = os.path.join(source_root_directory, cd_info.id)
-    create_directory(source_directory)
+    source_directory = rip_to_subdir(cd_info, source_root_directory, ffmpeg)
     output_directory = os.path.join(output_root_directory, cd_info.artist, cd_info.title)
-    create_directory(output_directory)
-    rip(cd_info, source_directory)
-    transcode_with_metadata(cd_info, source_directory, output_directory, output_format, ffmpeg, extra_options, output_ext)
+    transcode_with_metadata_directly(cd_info, source_directory, output_directory, output_format, ffmpeg, extra_options, output_ext)
