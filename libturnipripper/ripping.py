@@ -15,6 +15,8 @@ def create_directory(path):
     """ Creates the directory and all parent directories in the path, if they don't already exist. """
     if not os.path.isdir(path):
         os.makedirs(path)
+def escape_directory_name(directory_name):
+    return re.sub(r"[/\\]", "-", directory_name) # This will handle Unicode correctly
 def rip_directly(cd_info, source_directory, ffmpeg="ffmpeg"):
     """
     Rips all tracks from a CD that haven't been ripped yet.
@@ -107,7 +109,7 @@ def rip_to_subdir(cd_info, source_root_directory, ffmpeg="ffmpeg"):
     """
     Wraps rip_directly to rip to a source directory within the root
     """
-    source_directory = os.path.join(source_root_directory, cd_info.id)
+    source_directory = os.path.join(source_root_directory, escape_directory_name(cd_info.id))
     create_directory(source_directory)
     rip_directly(cd_info, source_directory, ffmpeg)
     return source_directory
@@ -116,5 +118,6 @@ def rip_and_transcode(cd_info, source_root_directory, output_root_directory, out
     Combines rip() and transcode_with_metadata() into a single function.
     """
     source_directory = rip_to_subdir(cd_info, source_root_directory, ffmpeg)
-    output_directory = os.path.join(output_root_directory, cd_info.artist, cd_info.title)
+    output_directory = os.path.join(output_root_directory, escape_directory_name(cd_info.artist), escape_directory_name(cd_info.title))
+    create_directory(output_directory)
     transcode_with_metadata_directly(cd_info, source_directory, output_directory, output_format, ffmpeg, extra_options, output_ext)

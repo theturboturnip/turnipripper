@@ -14,6 +14,13 @@ def y_n_input(query):
         elif answer[0] == 'n':
             return False
         print("Invalid Input")
+def string_value_input(query, options):
+    while True:
+        answer = input("{0} {1}: ".format(query, "/".join(options)))
+        for option in options:
+            if answer.strip().lower() == option.strip().lower():
+                return option # Return the original value of the option so the calling code can use it
+        print("Invalid Input")
 def number_range_input(query, range_min = 0, range_max = -1):
     while True:
         if (range_max > 0):
@@ -50,9 +57,7 @@ def select_cd_info_with_user_input(cddb_interfaces):
             selected_cd = number_range_input("", 0, len(definition_list))
             if selected_cd == 0:
                 return False
-            print(definition_list[selected_cd - 1])
-            if y_n_input("Confirm Selection"):
-                return definition_list[selected_cd - 1]
+            return definition_list[selected_cd - 1]
     
     def select_known_cd_definition():
         while True:
@@ -93,16 +98,34 @@ def select_cd_info_with_user_input(cddb_interfaces):
         if index > 0 and y_n_input("Select a previous definition?"):
             base_definition = select_known_cd_definition()
             break
+
     if base_definition == None:
         print("Select a definition")
         base_definition = select_known_cd_definition()
-        if base_definition:
-            print(base_definition)
-            return base_definition
-        return False
-    else:
-        return base_definition
-    
+        if not base_definition:
+            return False
+
+    final_definition = base_definition
+    while True:
+        print("Final Definition:")
+        print(final_definition)
+        edit_options = ["Title", "Artist", "Track", "None"]
+        option_to_edit = string_value_input("Choose a value to edit", edit_options)
+        if option_to_edit == "None":
+            return final_definition
+        elif option_to_edit == "Title":
+            final_definition.title = input("New Title [{}]: ".format(final_definition.title)).strip()
+        elif option_to_edit == "Artist":
+            final_definition.artist = input("New Artist [{}]: ".format(final_definition.artist)).strip()
+        elif option_to_edit == "Track":
+            track_to_edit = number_range_input("Edit which track? (0 to cancel)", 0, len(final_definition.tracks))
+            if track_to_edit == 0:
+                continue
+            final_definition.tracks[track_to_edit - 1] = input("New Track [{}]: ".format(final_definition.tracks[track_to_edit - 1])).strip()
+            #track_source_options = ["Server", "Manual"]
+            #track_source = 
+                
+            
 def main():
     # Parse any conf_file specification
     # We make this parser with add_help=False so that
@@ -122,7 +145,7 @@ def main():
     
     config_files = ["~/.turnipripper", "./.turnipripper"]
     if args.config_file:
-        config_files.append(args.conf_file)
+        config_files.append(args.config_file)
     config = configparser.SafeConfigParser()
     config.read(config_files)
     defaults.update(dict(config.items("DEFAULT")))
@@ -134,7 +157,6 @@ def main():
         parents=[conf_parser],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
-    parser.set_defaults(**defaults)
     parser.add_argument("-s", "--server_config_file", action="append", default=[],
                              help="Add a server config file", metavar="FILE")
     parser.add_argument("-p", "--protocol", type=int, default=6,
@@ -147,12 +169,13 @@ def main():
                              help="Set the folder used to store converted files")
     parser.add_argument("-of", "--output_format", type=str, default="none",
                              help="Set the output format of converted files. Set to 'none' to disable transcoding")
-    parser.add_argument("-oext", "--output_extension", type=str,
+    parser.add_argument("-oext", "--output_extension", type=str, default=None,
                              help="Set the extension given to converted files. Defaults to the format of the file, but can be changed for codecs like OGG Vorbis/Opus")
     parser.add_argument("--ffmpeg", type=str, default="ffmpeg",
                              help="Set the location of the ffmpeg binary")
     parser.add_argument("-fargs", "--ffmpeg_args", type=str, action="append", default=[],
                              help="Set any extra arguments for the ffmpeg transcoding. Can be used to set quality level or similar")
+    parser.set_defaults(**defaults)
     args = parser.parse_args(remaining_argv)
 
     server_config_files = args.server_config_file
@@ -195,13 +218,3 @@ def main():
         
 if __name__ == "__main__":
     main()
-    
-#vgmdb_server = libturnipripper.CDDB.Server("http://vgmdb.net/~cddb", libturnipripper.CDDB.DTitlePattern(artist_index = 2, album_index = 1))
-#normal_server = libturnipripper.CDDB.Server("http://freedb.freedb.org/~cddb/cddb.cgi")
-#cddb_interface = libturnipripper.CDDB.Interface(vgmdb_server, 6, "samuel", "host")
-#cd_info = libturnipripper.CDDB.get_cd_info(cddb_interface)
-
-#print(cd_info)
-#SOURCE_ROOT = "./test/source"
-#LIBRARY_ROOT = "./test/library"
-#libturnipripper.ripping.rip_and_transcode(cd_info, SOURCE_ROOT, LIBRARY_ROOT, "mp3")

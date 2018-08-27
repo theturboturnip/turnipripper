@@ -1,0 +1,4 @@
+[DEFAULT]
+output_format=mp3
+source_root_folder=./test/source
+library_root_folder=./test/library
