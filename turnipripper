@@ -74,7 +74,8 @@ def select_cd_info_with_user_input(cddb_interfaces):
             if not selected_definition:
                 continue
             return selected_definition
-    
+
+    has_any_definitions = False
     base_definition = None
     for (index, cddb_interface) in enumerate(cddb_interfaces):
         print ("Querying CD definitions from {}...".format(cddb_interface.server.address))
@@ -83,12 +84,14 @@ def select_cd_info_with_user_input(cddb_interfaces):
             print("No definitions for CD ID {0} on {1}, searching next server...".format(disc_info.id, cddb_interface.server.address))
             continue
         elif len(known_definitions[index]) == 1:
+            has_any_definitions = True
             print("Found definition from {}:".format(cddb_interface.server.address))
             print(known_definitions[index][0])
             if y_n_input("Use this definition as a base?"):
                 base_definition = known_definitions[index][0]
                 break
         else:
+            has_any_definitions = True
             print("Found {} definitions from {}:".format(len(known_definitions[index]), cddb_interface.server.address))
             selected_definition = select_cd_from_definition(known_definitions[index], zero_action="select none")
             if selected_definition:
@@ -100,10 +103,15 @@ def select_cd_info_with_user_input(cddb_interfaces):
             break
 
     if base_definition == None:
-        print("Select a definition")
-        base_definition = select_known_cd_definition()
-        if not base_definition:
-            return False
+        if has_any_definitions:
+            print("Select a definition")
+            base_definition = select_known_cd_definition()
+            if not base_definition:
+                return False
+        else:
+            if not y_n_input("No definitions found, use a blank definition as a base?"):
+                return False
+            base_definition = libturnipripper.data.CDInfo.create_null(disc_info)
 
     final_definition = base_definition
     while True:

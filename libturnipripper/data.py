@@ -1,4 +1,5 @@
 import subprocess
+from libturnipripper import CDDB
 
 # Data Classes
 class DiscInfo:
@@ -19,10 +20,14 @@ class CDInfo:
         self.artist = split_name[title_pattern.artist_index]
         self.tracks = []
         for i in range(len(disc_info.track_lengths)):
-            self.tracks.append(cddb_track_info["TTITLE" + str(i)])
+            self.tracks.append(cddb_track_info.get("TTITLE" + str(i), "Track " + str(i + 1)))
 
     def __str__(self):
         return "Album: {}\nArtist: {}\nTrack Names: \n\t{}\n".format(self.title, self.artist, "\n\t".join(self.tracks))
+
+    @staticmethod
+    def create_null(disc_info):
+        return CDInfo(CDDB.DTitlePattern(0, 1), disc_info, {"DISCID": disc_info.id, "DTITLE": "None / None"})
 
 def get_disc_info():
     """
