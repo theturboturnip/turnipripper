@@ -23,7 +23,13 @@ class CDInfo:
             self.tracks.append(cddb_track_info.get("TTITLE" + str(i), "Track " + str(i + 1)))
 
     def __str__(self):
-        return "Album: {}\nArtist: {}\nTrack Names: \n\t{}\n".format(self.title, self.artist, "\n\t".join(self.tracks))
+        to_return = "Album: {}\nArtist: {}\nTrack Names: \n".format(self.title, self.artist)
+        highest_track = len(self.tracks)
+        highest_digits = (highest_track//10) + 1
+        format_str = "\t{0:0"+str(highest_digits)+"d}. {1}\n"
+        for i in range(len(self.tracks)):
+            to_return += format_str.format(i+1, self.tracks[i])
+        return to_return
 
     @staticmethod
     def create_null(disc_info):
