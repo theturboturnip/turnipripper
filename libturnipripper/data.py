@@ -40,6 +40,11 @@ def get_disc_info():
     Creates a DiscInfo based on the disc that's currently in the CD Drive
     """
     cmd_output = subprocess.getoutput(["cd-discid"]).split(" ")
-    if len(cmd_output) - 3 != int(cmd_output[1]):
+    try:
+        ntracks = int(cmd_output[1])
+        pass
+    except:
+        raise RuntimeError("cd-discid did not return useful information - is it installed? (%s)"%str(cmd_output))
+    if len(cmd_output) - 3 != ntracks:
         raise RuntimeError("DiscID mismatch between reported track count and amount of tracks given")
     return DiscInfo(cmd_output[0], [int(x) for x in cmd_output[2:-1]], int(cmd_output[-1]))

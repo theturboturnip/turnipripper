@@ -90,11 +90,11 @@ def transcode_with_metadata_directly(cd_info, source_directory, output_directory
         input_filename = os.path.join(source_directory, input_filename_generator(i))
         if not os.path.isfile(input_filename):
             raise RuntimeError("Couldn't find file " + input_filename)
-        output_filename = os.path.join(output_directory, output_filename_format.format(
+        output_filename = os.path.join(output_directory, escape_directory_name(output_filename_format.format(
             title = cd_info.tracks[i],
             track = i + 1,
             output_ext = output_ext
-        ))
+        )))
         translated_ffmpeg_command = [x.format(input_filename = input_filename,
                                               title = cd_info.tracks[i],
                                               artist = cd_info.artist,
