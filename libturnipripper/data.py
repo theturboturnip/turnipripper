@@ -16,6 +16,7 @@ class CDInfo:
         self.id = cddb_track_info["DISCID"]
         split_name = cddb_track_info["DTITLE"].split(" / ")
         # TODO: Handle the case where the pattern has invalid indices
+        if len(split_name)==1: split_name.append(split_name[0])
         self.title = split_name[title_pattern.album_index]
         self.artist = split_name[title_pattern.artist_index]
         self.tracks = []

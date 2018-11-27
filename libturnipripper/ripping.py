@@ -27,10 +27,17 @@ def rip_directly(cd_info, source_directory, ffmpeg="ffmpeg"):
         # CDParanoia takes 1-indexed track indices.
         if rip_span_start == rip_span_end:
             span_str = str(rip_span_start + 1)
+            pass
         else:
             span_str = "{}-{}".format(rip_span_start + 1, rip_span_end + 1)
-        subprocess.run(["cdparanoia", "-B", "--output-wav", span_str], check=True, cwd=source_directory)
-        
+            pass
+        try:
+            completed = subprocess.run(["cdparanoia", "-B", "--output-wav", span_str], stderr=subprocess.PIPE, cwd=source_directory, universal_newlines=True)
+            pass
+        except:
+            raise RuntimeError("cdparanoia did not rip correctly - is it installed?")
+        if completed.returncode!=0:
+            raise RuntimeError("cdparanoia did not rip correctly - (%s)"%str(completed.stderr))
         wav_files = []
         tracks = range(rip_span_start, rip_span_end + 1)
         for i in tracks: # Inclusive range, range() returns exclusive at the end
