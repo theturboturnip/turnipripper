@@ -112,12 +112,12 @@ def transcode_with_metadata_directly(cd_info, source_directory, output_directory
                                               track_count = len(cd_info.tracks))
                                      for x in ffmpeg_command]
         try:
-            completed = subprocess.run(translated_ffmpeg_command, universal_newlines=True, stderr=subprocess.PIPE)
+            completed = subprocess.run(translated_ffmpeg_command)
             pass
         except:
             raise RuntimeError("ffmpeg did not transcode correctly - is it installed?")
         if completed.returncode!=0:
-            raise RuntimeError("ffmpeg did not transcode correctly - (%s)"%str(completed.stderr))
+            raise RuntimeError("ffmpeg did not transcode correctly")
 
 def rip_to_subdir(cd_info, source_root_directory, ffmpeg="ffmpeg"):
     """
