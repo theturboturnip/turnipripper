@@ -32,12 +32,13 @@ def rip_directly(cd_info, source_directory, ffmpeg="ffmpeg"):
             span_str = "{}-{}".format(rip_span_start + 1, rip_span_end + 1)
             pass
         try:
-            completed = subprocess.run(["cdparanoia", "-B", "--output-wav", span_str], stderr=subprocess.PIPE, cwd=source_directory, universal_newlines=True)
+            # cdparanoia puts its progress on stderr, which means we cannot pipe stderr for use if the command fails
+            completed = subprocess.run(["cdparanoia", "-B", "--output-wav", span_str], cwd=source_directory)
             pass
         except:
             raise RuntimeError("cdparanoia did not rip correctly - is it installed?")
         if completed.returncode!=0:
-            raise RuntimeError("cdparanoia did not rip correctly - (%s)"%str(completed.stderr))
+            raise RuntimeError("cdparanoia did not rip correctly")
         wav_files = []
         tracks = range(rip_span_start, rip_span_end + 1)
         for i in tracks: # Inclusive range, range() returns exclusive at the end
@@ -110,7 +111,13 @@ def transcode_with_metadata_directly(cd_info, source_directory, output_directory
                                               track = i + 1,
                                               track_count = len(cd_info.tracks))
                                      for x in ffmpeg_command]
-        subprocess.run(translated_ffmpeg_command, check=True)
+        try:
+            completed = subprocess.run(translated_ffmpeg_command, universal_newlines=True, stderr=subprocess.PIPE)
+            pass
+        except:
+            raise RuntimeError("ffmpeg did not transcode correctly - is it installed?")
+        if completed.returncode!=0:
+            raise RuntimeError("ffmpeg did not transcode correctly - (%s)"%str(completed.stderr))
 
 def rip_to_subdir(cd_info, source_root_directory, ffmpeg="ffmpeg"):
     """
