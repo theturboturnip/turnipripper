@@ -125,6 +125,15 @@ def rip_to_subdir(cd_info, source_root_directory, ffmpeg="ffmpeg"):
     """
     source_directory = os.path.join(source_root_directory, escape_directory_name(cd_info.id))
     create_directory(source_directory)
+    with open(os.path.join(source_directory,"disc_info.txt"),"w") as f:
+        print(f"{cd_info.id} {cd_info.as_disc_info()}",file=f)
+        print(f"cddb: {cd_info.as_CDDB_track_info()}",file=f)
+        print(f"musicbrainz: {cd_info.as_musicbrainz()}",file=f)
+        print(f"\nCD record:\n{cd_info.cdrecord_output()}",file=f)
+        pass
+    with open(os.path.join(source_directory,"cd_info.txt"),"w") as f:
+        print(f"{cd_info}",file=f)
+        pass
     rip_directly(cd_info, source_directory, ffmpeg)
     return source_directory
 def rip_and_transcode(cd_info, source_root_directory, output_root_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None):

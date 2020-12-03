@@ -94,7 +94,7 @@ def select_cd_info_with_user_input(cddb_interfaces):
     has_any_definitions = False
     base_definition = None
     for (index, cddb_interface) in enumerate(cddb_interfaces):
-        print ("Querying CD definitions from {}...".format(cddb_interface.server.address))
+        print ("Querying CD definitions for {} from {}...".format(disc_info, cddb_interface.server.address))
         known_definitions.append(libturnipripper.CDDB.get_cd_info(cddb_interface, disc_info))
         if known_definitions[index] == None or len(known_definitions[index]) == 0:
             print("No definitions for CD ID {0} on {1}, searching next server...".format(disc_info.id, cddb_interface.server.address))
