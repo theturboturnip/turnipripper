@@ -6,6 +6,7 @@ import libturnipripper.ripping
 import configparser
 import argparse
 import re
+import os.path
 
 class NamedRegex:
     def __init__(self, name, pattern):
@@ -210,6 +211,8 @@ def main():
                              help="Set any extra arguments for the ffmpeg transcoding. Can be used to set quality level or similar")
     parser.add_argument("--rip_only", action="store_true", default=False,
                              help="Set to only rip and generate flac - does not request track info, forces output_format of none")
+    parser.add_argument("--rerip", action="store_true", default=False,
+                             help="Set if attempting to rip a CD already ripped before")
     parser.add_argument("--device", type=str, default="/dev/cdrom",
                              help="Use <device> rather than /dev/cdrom")
     parser.add_argument("--from_source", type=str, default="",
@@ -254,6 +257,7 @@ def main():
     cddb_interfaces = [libturnipripper.CDDB.Interface(server, args.protocol, args.username, "host") for server in servers]
 
     # Get CD info unless riponly
+    print(f"TurnipRipper ripping disc id {disc_info.cddb_id}")
     if args.rip_only:
         cd_info = None
         args.output_format = None
@@ -266,10 +270,13 @@ def main():
     
     if args.output_format == "none" or args.output_format == None:
         print ("Transcoding disabled, only ripping")
-        libturnipripper.ripping.rip_to_subdir(disc_info, None, args.source_root_folder, args.ffmpeg, force_overwrite=True)
+        source_directory = libturnipripper.ripping.rip_directory(args.source_root_folder, disc_info)
+        if os.path.exists(source_directory) and not args.rerip:
+            raise Exception(f"Path {source_directory} already exists and not a rerip")
+        libturnipripper.ripping.rip_to_subdir(disc_info, None, args.device, args.source_root_folder, args.ffmpeg, force_overwrite=True)
     else:
         print("Ripping and transcoding to {}".format(args.output_format))
-        libturnipripper.ripping.rip_and_transcode(disc_info, cd_info, args.source_root_folder, args.library_root_folder, args.output_format, ffmpeg=args.ffmpeg, extra_options=args.ffmpeg_args, output_ext = args.output_extension)
+        libturnipripper.ripping.rip_and_transcode(disc_info, cd_info, args.device, args.source_root_folder, args.library_root_folder, args.output_format, ffmpeg=args.ffmpeg, extra_options=args.ffmpeg_args, output_ext = args.output_extension)
         
 if __name__ == "__main__":
     main()

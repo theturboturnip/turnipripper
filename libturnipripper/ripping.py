@@ -17,7 +17,7 @@ def create_directory(path):
         os.makedirs(path)
 def escape_directory_name(directory_name):
     return re.sub(r"[/\\]", "-", directory_name) # This will handle Unicode correctly
-def rip_directly(disc_info, cd_info, source_directory, ffmpeg="ffmpeg"):
+def rip_directly(disc_info, cd_info, device, source_directory, ffmpeg="ffmpeg"):
     """
     Rips all tracks from a CD that haven't been ripped yet.
     Stores them in source_directory. Will not create any subfolders for different albums.
@@ -33,7 +33,7 @@ def rip_directly(disc_info, cd_info, source_directory, ffmpeg="ffmpeg"):
             pass
         try:
             # cdparanoia puts its progress on stderr, which means we cannot pipe stderr for use if the command fails
-            completed = subprocess.run(["cdparanoia", "-B", "--output-wav", span_str], cwd=source_directory)
+            completed = subprocess.run(["cdparanoia", "--force-cdrom-device", device, "-B", "--output-wav", span_str], cwd=source_directory)
             pass
         except:
             raise RuntimeError("cdparanoia did not rip correctly - is it installed?")
@@ -131,11 +131,17 @@ def transcode_with_metadata_directly(disc_info,
         if completed.returncode!=0:
             raise RuntimeError("ffmpeg did not transcode correctly")
 
-def rip_to_subdir(disc_info, cd_info, source_root_directory, ffmpeg="ffmpeg", force_overwrite=False):
+        pass
+    pass
+
+def rip_directory(source_root_directory, disc_info):
+    return os.path.join(source_root_directory, escape_directory_name(disc_info.cddb_id))
+
+def rip_to_subdir(disc_info, cd_info, device, source_root_directory, ffmpeg="ffmpeg", force_overwrite=False):
     """
     Wraps rip_directly to rip to a source directory within the root
     """
-    source_directory = os.path.join(source_root_directory, escape_directory_name(disc_info.cddb_id))
+    source_directory = rip_directory(source_root_directory, disc_info)
     create_directory(source_directory)
     disc_info.write_disc_info(source_directory, force_overwrite)
     if cd_info is not None:
@@ -143,13 +149,13 @@ def rip_to_subdir(disc_info, cd_info, source_root_directory, ffmpeg="ffmpeg", fo
             print(f"{cd_info}",file=f)
             pass
         pass
-    rip_directly(disc_info, cd_info, source_directory, ffmpeg)
+    rip_directly(disc_info, cd_info, device, source_directory, ffmpeg)
     return source_directory
-def rip_and_transcode(disc_info, cd_info, source_root_directory, output_root_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None):
+def rip_and_transcode(disc_info, cd_info, device, source_root_directory, output_root_directory, output_format, ffmpeg = "ffmpeg", extra_options = [], output_ext = None):
     """
     Combines rip() and transcode_with_metadata() into a single function.
     """
-    source_directory = rip_to_subdir(disc_info, cd_info, source_root_directory, ffmpeg)
+    source_directory = rip_to_subdir(disc_info, cd_info, device, source_root_directory, ffmpeg)
     output_directory = os.path.join(output_root_directory, escape_directory_name(disc_info.artist), escape_directory_name(disc_info.title))
     create_directory(output_directory)
     transcode_with_metadata_directly(disc_info, source_directory, output_directory, output_format, ffmpeg, extra_options, output_ext)
