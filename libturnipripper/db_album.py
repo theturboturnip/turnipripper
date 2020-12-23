@@ -106,6 +106,7 @@ class Album(DataClass):
     #f All done
     pass
 
+#c AlbumFilter
 class AlbumFilter(DataClassFilter):
     order_keys = {
         "title":"output_title",
@@ -117,5 +118,6 @@ class AlbumFilter(DataClassFilter):
         }
     pass
 
+#c AlbumSet
 class AlbumSet(DataClassSet):
     pass

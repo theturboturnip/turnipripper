@@ -9,6 +9,7 @@ Toplevel command for turnipripperdb
 from libturnipripper.command     import Command, CommandArgs
 from libturnipripper.cmd_rip     import RipCommand
 from libturnipripper.cmd_album   import AlbumCommand
+from libturnipripper.cmd_disc    import DiscCommand
 
 import typing
 from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
@@ -62,6 +63,7 @@ class ToplevelCommand(Command):
     subcommands = [
         RipCommand,
         AlbumCommand,
+        DiscCommand,
     ]
     pass
 

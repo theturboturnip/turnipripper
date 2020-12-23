@@ -2,7 +2,7 @@
 from pathlib import Path
 import json
 import sqlite3
-from .data_class import DataClass, str_add_to_set, str_set_as_list
+from .data_class import DataClass, DataClassSet, DataClassFilter, str_add_to_set, str_set_as_list
 from .unique_id import UniqueId
 from .db_album import Album
 
@@ -307,3 +307,18 @@ class Track(DataClass):
     #f All done
     pass
 
+#c DiscFilter
+class DiscFilter(DataClassFilter):
+    order_keys = {
+        "title":"output_title",
+        "id":"uniq_id",
+        }
+    filter_keys = {
+        "title":("re","output_title"),
+        "id":   ("re","uniq_id"),
+        }
+    pass
+
+#c DiscSet
+class DiscSet(DataClassSet):
+    pass
