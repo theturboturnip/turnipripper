@@ -51,7 +51,7 @@ class MusicbrainzDiscPressing(object):
             if i<len(self.offsets):   data["offset"]  = self.offsets[i]
             if i+1<len(self.offsets): data["sectors"] = self.offsets[i+1] - self.offsets[i]
             if i+1==len(self.offsets): data["sectors"] = self.sectors - self.offsets[i]
-            yield (i,data)
+            yield (track.position,data)
             pass
         pass
     #f get_media_download_data
@@ -282,6 +282,7 @@ class MusicbrainzRecordings(object):
     pass
 
 #c MusicbrainzID
+T2 = TypeVar('T2', bound='MusicbrainzID')
 class MusicbrainzID(DataClass):
     #v Properties
     json_prop_types : ClassVar[Dict[str,type]] = {}
@@ -300,6 +301,18 @@ class MusicbrainzID(DataClass):
         self.mb_id = ""
         self.postset_string = self.extract_data
         pass
+    #f of_disc
+    def of_disc(cls:Type[T2], tracks:List[Any]) -> T2:
+        if tracks==[]: return cls("")
+        extent = tracks[-1].offset + tracks[-1].sectors
+        string = f"{len(tracks)}"
+        for t in disc.tracks:
+            string += f" {t.offset}"
+            pass
+        string += f" {extent}"
+        d = cls(string)
+        d.extract_data()
+        return d
     #f extract_data
     def extract_data(self) -> None:
         musicbrainz_data = [int(x) for x in self.string.split(" ")]

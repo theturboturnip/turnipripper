@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
+"""
+Concept:
+
+rip <device> <disc name guess> <src directory>
+metadata_edit <src directory>
+encode <src directory>
+
+"""
+
 import libturnipripper.CDDB
 import libturnipripper.data
 import libturnipripper.ripping
