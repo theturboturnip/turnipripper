@@ -1,14 +1,9 @@
 #a Imports
-from pathlib import Path
-import hashlib
-import base64
-import json
-from libturnipripper import musicbrainz
 from sqlite3 import Cursor
 
+from .db_types import *
 import typing
 from typing import Optional, ClassVar, TypeVar, Type, Iterable, Union, Tuple, List, Dict, Set, Any, cast
-Json = Union[List[Any], Dict[str,Any], str, int]
 
 #f str_add_to_set
 def str_add_to_set(set_str:str, s:str, separator:str="###") -> str:

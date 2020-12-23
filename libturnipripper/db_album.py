@@ -1,7 +1,8 @@
 #a Imports
 from pathlib import Path
-from libturnipripper.data_class import DataClass, str_add_to_set, str_set_as_list
-from libturnipripper.unique_id import UniqueId
+from .data_class import DataClass, str_add_to_set, str_set_as_list
+from .unique_id import UniqueId
+
 import typing
 from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
 
