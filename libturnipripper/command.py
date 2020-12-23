@@ -9,7 +9,7 @@ class CommandCallback(Protocol):
     def __call__(self, toplevel_parser:ArgumentParser, config:Config, args:"CommandArgs") -> None:
         pass
 
-class CommandArgs:
+class CommandArgs(Namespace):
     func : CommandCallback
     def __init__(self, args:Namespace) -> None:
         for (k,v) in vars(args).items():

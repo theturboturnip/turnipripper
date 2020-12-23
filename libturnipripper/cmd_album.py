@@ -3,7 +3,7 @@ import re
 import json
 
 from .database import Database
-from .db_album import AlbumSet, AlbumFilter
+from .db_album import Album, AlbumSet, AlbumFilter
 from .command import Command, CommandArgs
 
 import typing
@@ -35,10 +35,13 @@ class AlbumShowCommand(Command):
         albums = AlbumSet()
         filter = self.args.create_filter()
         for (uid,album) in db.iter_albums():
-            albums.add_if(filter, album)
+            albums.add_if(filter, uid, album)
             pass
         self.show(albums)
         pass
+    #f show
+    def show(self, albums:AlbumSet) -> None:
+        raise Exception("Must override in subclass")
     #f All done
     pass
 
@@ -50,6 +53,7 @@ class AlbumJsonCommand(AlbumShowCommand):
     def show(self, albums:AlbumSet) -> None:
         json_data = []
         for album in albums.iter_ordered():
+            album = cast(Album,album)
             json_data.append((str(album.uniq_id),album.as_json()))
             pass
         print(json.dumps(json_data,indent=1))
@@ -64,6 +68,7 @@ class AlbumListCommand(AlbumShowCommand):
     #f show
     def show(self, albums:AlbumSet) -> None:
         for album in albums.iter_ordered():
+            album = cast(Album,album)
             print(album.uniq_id,album.as_json())
             pass
         pass

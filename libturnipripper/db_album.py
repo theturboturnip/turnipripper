@@ -1,7 +1,7 @@
 #a Imports
 import re
 from pathlib import Path
-from .data_class import DataClass, str_add_to_set, str_set_as_list
+from .data_class import DataClass, DataClassFilter, DataClassSet, str_add_to_set, str_set_as_list
 from .unique_id import UniqueId
 
 import typing
@@ -106,66 +106,16 @@ class Album(DataClass):
     #f All done
     pass
 
-class AlbumFilter:
-    order_key : str = ""
-    order_keys : ClassVar[Dict[str,str]] = {
+class AlbumFilter(DataClassFilter):
+    order_keys = {
         "title":"output_title",
         "id":"uniq_id",
         }
-    filter_keys: ClassVar[Dict[str,Tuple[str,str]]] = {
+    filter_keys = {
         "title":("re","output_title"),
         "id":   ("re","uniq_id"),
         }
-    filters : List[Callable[[Any],bool]]
-    def __init__(self) -> None:
-        self.filters = []
-        self.order_key = ""
-        pass
-    def order_by(self, order_key:str) -> None:
-        if order_key not in self.order_keys:
-            raise Exception("Cannot order by {order_key}")
-        self.order_key = order_key
-        pass
-    def add_filter(self, which:str, value:str) -> None:
-        if which not in self.filter_keys:
-            raise Exception(f"Unknown filter '{which}'")
-        (filter_type, attr) = self.filter_keys[which]
-        value_re = re.compile(value)
-        def re_filter(x:object, attr=attr, value_re=value_re) -> bool:
-            return value_re.search(str(getattr(x,attr))) != None
-        self.filters.append(re_filter)
-        pass
-    def apply(self, album:Album) -> Optional[str]:
-        for f in self.filters:
-            if not f(album): return None
-        if self.order_key in self.order_keys:
-            return str(getattr(album, self.order_keys[self.order_key]))
-        return str(album.uniq_id)
     pass
-class AlbumSet:
-    things : Dict[UniqueAlbumId,Tuple[Album,str]]
-    def __init__(self) -> None:
-        self.things = {}
-        pass
-    def add_if(self, filter:AlbumFilter, album:Album) -> None:
-        order_by = filter.apply(album)
-        if order_by is not None:
-            self.add(album, order_by)
-            pass
-        pass
-    def add(self, album:Album, order_by:str) -> None:
-        if album.uniq_id not in self.things:
-            self.things[album.uniq_id] = (album, order_by)
-            pass
-        pass
-    def iter_ordered(self) -> Iterable[Album]:
-        l = []
-        for (k,(album,order_by)) in self.things.items():
-            l.append((album,order_by))
-            pass
-        l.sort(key=lambda x:x[1])
-        for (album,order_by) in l:
-            yield(album)
-            pass
-        pass
+
+class AlbumSet(DataClassSet):
     pass

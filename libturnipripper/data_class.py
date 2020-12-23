@@ -1,9 +1,10 @@
 #a Imports
 from sqlite3 import Cursor
+import re
 
 from .db_types import *
 import typing
-from typing import Optional, ClassVar, TypeVar, Type, Iterable, Union, Tuple, List, Dict, Set, Any, cast
+from typing import Optional, ClassVar, TypeVar, Type, Callable, Iterable, Union, Tuple, List, Dict, Set, Any, cast
 
 #f str_add_to_set
 def str_add_to_set(set_str:str, s:str, separator:str="###") -> str:
@@ -156,3 +157,72 @@ class DataClass(object):
     #f All done
     pass
 
+#c DataClassFilter
+class DataClassFilter:
+    order_keys : ClassVar[Dict[str,str]] = {
+        }
+    filter_keys: ClassVar[Dict[str,Tuple[str,str]]] = {
+        }
+    order_key  : str
+    filters    : List[Callable[[Any],bool]]
+    #f __init__
+    def __init__(self) -> None:
+        self.filters = []
+        self.order_key = list(self.order_keys.keys())[0]
+        pass
+    #f order_by
+    def order_by(self, order_key:str) -> None:
+        if order_key not in self.order_keys:
+            raise Exception("Cannot order by {order_key}")
+        self.order_key = order_key
+        pass
+    #f add_filter
+    def add_filter(self, which:str, value:str) -> None:
+        if which not in self.filter_keys:
+            raise Exception(f"Unknown filter '{which}'")
+        (filter_type, attr) = self.filter_keys[which]
+        value_re = re.compile(value)
+        def re_filter(x:object, attr:str=attr, value_re:re.Pattern[str]=value_re) -> bool:
+            return value_re.search(str(getattr(x,attr))) != None
+        self.filters.append(re_filter)
+        pass
+    #f apply
+    def apply(self, data:DataClass) -> Optional[str]:
+        for f in self.filters:
+            if not f(data): return None
+            pass
+        return str(getattr(data, self.order_keys[self.order_key]))
+    #f All done
+    pass
+
+#c DataClassSet
+class DataClassSet:
+    things : Dict[Any,Tuple[DataClass,str]]
+    def __init__(self) -> None:
+        self.things = {}
+        pass
+    #f add_if
+    def add_if(self, filter:DataClassFilter, uid:Any, data:DataClass) -> None:
+        order_by = filter.apply(data)
+        if order_by is not None:
+            self.add(uid, data, order_by)
+            pass
+        pass
+    #f add
+    def add(self, uid:Any, data:DataClass, order_by:str) -> None:
+        if uid not in self.things:
+            self.things[uid] = (data, order_by)
+            pass
+        pass
+    #f iter_ordered
+    def iter_ordered(self) -> Iterable[DataClass]:
+        l = []
+        for (k,(data,order_by)) in self.things.items():
+            l.append((data,order_by))
+            pass
+        l.sort(key=lambda x:x[1])
+        for (data,order_by) in l:
+            yield(data)
+            pass
+        pass
+    pass
