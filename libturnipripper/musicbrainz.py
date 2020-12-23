@@ -285,8 +285,14 @@ class MusicbrainzRecordings(object):
 T2 = TypeVar('T2', bound='MusicbrainzID')
 class MusicbrainzID(DataClass):
     #v Properties
-    json_prop_types : ClassVar[Dict[str,type]] = {}
-    data_class_type : ClassVar[str] = "Musicbrainz"
+    json_prop_types = {
+        "string":str,
+        "mb_id":str,
+        "first":int,
+        "last":int,
+        "offsets":None,
+        }
+    data_class_type = "Musicbrainz"
     string : str
     mb_id : str
     first : int
@@ -301,12 +307,22 @@ class MusicbrainzID(DataClass):
         self.mb_id = ""
         self.postset_string = self.extract_data
         pass
+    #f from_json_offsets - no need for as_json_offsets
+    def from_json_offsets(self, v:List[int]) -> None:
+        assert(type(v)==list)
+        self.offsets = []
+        for n in v:
+            assert(type(n)==int)
+            self.offsets.append(n)
+            pass
+        pass
     #f of_disc
+    @classmethod
     def of_disc(cls:Type[T2], tracks:List[Any]) -> T2:
         if tracks==[]: return cls("")
         extent = tracks[-1].offset + tracks[-1].sectors
         string = f"{len(tracks)}"
-        for t in disc.tracks:
+        for t in tracks:
             string += f" {t.offset}"
             pass
         string += f" {extent}"

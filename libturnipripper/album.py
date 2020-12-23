@@ -18,10 +18,11 @@ class AlbumArgs(CommandArgs):
 class AlbumListCommand(Command):
     #v Properties
     name = "list"
+    args_class = AlbumArgs
+    args       : AlbumArgs
     #f do_command
-    def do_command(self, parser:ArgumentParser, config:Config, args:CommandArgs) -> None:
-        album_args = cast(AlbumArgs, args)
-        print("Do command!")
+    def do_command(self) -> None:
+        self.parser.print_help()
         pass
     #f All done
     pass
@@ -34,13 +35,14 @@ class AlbumCommand(Command):
         ("--id",):{"type":str, "default":"", "help":"Regular expression to match id with"},
         ("--title",):{"type":str, "default":"", "help":"Regular expression to match title with"},
         }
+    args_class = AlbumArgs
+    args       : AlbumArgs
     subcommands = [AlbumListCommand]
     #f do_command
-    def do_command(self, parser:ArgumentParser, config:Config, args:CommandArgs) -> None:
-        album_args = cast(AlbumArgs, args)
-        id_re = re.compile(album_args.id)
-        title_re = re.compile(album_args.title)
-        db = Database.from_config(config.database)
+    def do_command(self) -> None:
+        id_re = re.compile(self.args.id)
+        title_re = re.compile(self.args.title)
+        db = Database.from_config(self.config.database)
         albums = set()
         for (k,v) in db.iter_albums():
             if id_re.search(str(k)): albums.add(k)

@@ -120,6 +120,7 @@ class DatabaseConfig(ConfigSection):
     root: Path
     dbfile : Optional[Path]
     json_paths: List[str]
+    primary : str
     pass
                                           
 #c RipConfig

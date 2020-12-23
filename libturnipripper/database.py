@@ -14,8 +14,8 @@ Json = Union[List[Any], Dict[str,Any], str, int]
 import sqlite3
 
 #f Useulf functions
-def sha1_of(s:str) -> str:
-    sha1 = hashlib.sha1(s)
+def sha1_of(b:bytes) -> str:
+    sha1 = hashlib.sha1(b)
     return sha1.hexdigest()
 
 #a Classes
@@ -51,13 +51,17 @@ class UniqueId:
             self.uniq_str = f"{self.class_str}.{self.uniq_id:04d}"
             pass
         pass
-    def __hash__(self): return hash(self.uniq_str)
-    def __lt__(self, other): return self.uniq_str < other.uniq_str
-    def __gt__(self, other): return self.uniq_str > other.uniq_str
-    def __eq__(self, other): return self.uniq_str == other.uniq_str
-    def __ne__(self, other): return self.uniq_str != other.uniq_str
-    def __le__(self, other): return self.uniq_str <= other.uniq_str
-    def __ge__(self, other): return self.uniq_str >= other.uniq_str
+    def __hash__(self) -> int: return hash(self.uniq_str)
+    def __lt__(self, other:T) -> bool: return self.uniq_str < other.uniq_str
+    def __gt__(self, other:T) -> bool: return self.uniq_str > other.uniq_str
+    def __eq__(self, other:object) -> bool:
+        if not isinstance(other, UniqueId): return NotImplemented
+        return self.uniq_str == other.uniq_str
+    def __ne__(self, other:object) -> bool:
+        if not isinstance(other, UniqueId): return NotImplemented
+        return self.uniq_str != other.uniq_str
+    def __le__(self, other:T) -> bool: return self.uniq_str <= other.uniq_str
+    def __ge__(self, other:T) -> bool: return self.uniq_str >= other.uniq_str
     def __str__(self) -> str:
         return self.uniq_str
     def matches_uniq_id_str(self, string:str) -> bool:
@@ -82,7 +86,16 @@ class UniqueDiscId(UniqueId):
 #c Album
 class Album(DataClass):
     #v Properties
-    json_prop_types : ClassVar[Dict[str,type]] = {"label":str, "artist":str, "title":str, "num_discs":int, "musicbrainz_release_id":str, "downloaded_titles":str, "downloaded_artists":str, "json_path":None}
+    json_prop_types = {
+        "label":str,
+        "artist":str,
+        "title":str,
+        "num_discs":int,
+        "musicbrainz_release_id":str,
+        "downloaded_titles":str,
+        "downloaded_artists":str,
+        "json_path":None
+    }
     sql_columns     : ClassVar[List[Tuple[str,type]]] = [
         ("!uniq_id",str),
         ("label",str),
@@ -94,8 +107,8 @@ class Album(DataClass):
         ("downloaded_artists",str),
         ("json_path",str),
     ]
-    data_class_type : ClassVar[str] = "Album"
-    sql_table_name : ClassVar[str] = "album"
+    data_class_type = "Album"
+    sql_table_name  = "album"
     uniq_id   : UniqueAlbumId
     label     : str
     artist    : str
@@ -145,12 +158,46 @@ class Album(DataClass):
 #c Disc
 class Disc(DataClass):
     #v Properties
-    json_prop_types : ClassVar[Dict[str,type]] = {"cddb_id":str, "num_tracks":int, "src_directory":str, "album_uniq_id":str, "artist":str, "title":str, "musicbrainz_string":str, "musicbrainz_id":str, "musicbrainz_release_id":str, "total_length":int, "disc_of_set":int, "downloaded_titles":str, "downloaded_artists":str, "rip_data":str, "rip_date":str, "rip_time":str, "tracks":None, "json_path":None}
-    data_class_type : ClassVar[str] = "Disc"
-    sql_table_name : ClassVar[str] = "disc"
-    sql_columns     : ClassVar[List[Tuple[str,type]]] = [
+    json_prop_types = {
+        "cddb_id":str,
+        "num_tracks":int,
+        "src_directory":str,
+        "album_uniq_id":str,
+        "artist":str,
+        "title":str,
+        "musicbrainz_string":str,
+        "musicbrainz_id":str,
+        "musicbrainz_release_id":str,
+        "total_length":int,
+        "disc_of_set":int,
+        "downloaded_titles":str,
+        "downloaded_artists":str,
+        "rip_data":str,
+        "rip_date":str,
+        "rip_time":str,
+        "tracks":None,
+        "json_path":None,
+    }
+    data_class_type  = "Disc"
+    sql_table_name   = "disc"
+    sql_columns      = [
         ("!uniq_id",str),
-        ("cddb_id",str), ("num_tracks",int), ("src_directory",str), ("album_uniq_id",str), ("artist",str), ("title",str), ("musicbrainz_string",str), ("musicbrainz_id",str), ("musicbrainz_release_id",str), ("total_length",int), ("disc_of_set",int), ("downloaded_titles",str), ("downloaded_artists",str), ("rip_data",str), ("rip_date",str), ("rip_time",str),
+        ("cddb_id",str),
+        ("num_tracks",int),
+        ("src_directory",str),
+        ("album_uniq_id",str),
+        ("artist",str),
+        ("title",str),
+        ("musicbrainz_string",str),
+        ("musicbrainz_id",str),
+        ("musicbrainz_release_id",str),
+        ("total_length",int),
+        ("disc_of_set",int),
+        ("downloaded_titles",str),
+        ("downloaded_artists",str),
+        ("rip_data",str),
+        ("rip_date",str),
+        ("rip_time",str),
         ("json_path",str),
         ]
     uniq_id   : UniqueDiscId
@@ -205,8 +252,7 @@ class Disc(DataClass):
         self.postset_num_tracks = self.update_track_list
         pass
     #f calculate_cddbid
-    def calculate_cddbid(self):
-        # print([str(t) for t in self.tracks])
+    def calculate_cddbid(self) -> None:
         track_starts = [t.offset for t in self.tracks]
         csum = sum([sum([int(j) for j in list(str(i//75))]) for i in track_starts]) % 255
         if self.tracks!=[]:
@@ -272,14 +318,14 @@ class Disc(DataClass):
             pass
         pass
     #f as_json_tracks
-    def as_json_tracks(self, tracks:List["Track"]) -> None:
+    def as_json_tracks(self, tracks:List["Track"]) -> List[Json]:
         tracks_json = []
         for t in tracks:
             tracks_json.append(t.as_json())
             pass
         return tracks_json
     #f sql3_insert_entry
-    def sql3_insert_entry(self, sql3_cursor) -> None:
+    def sql3_insert_entry(self, sql3_cursor:sqlite3.Cursor) -> None:
         super().sql3_insert_entry(sql3_cursor)
         for t in self.tracks:
             t.sql3_insert_entry(sql3_cursor)
@@ -308,7 +354,7 @@ class Disc(DataClass):
 
 #c Track
 class Track(DataClass):
-    json_prop_types : ClassVar[Dict[str,type]] = {
+    json_prop_types = {
         "number":int,
         "offset":int,
         "sectors":int,
@@ -318,8 +364,8 @@ class Track(DataClass):
         "downloaded_titles":str,
         "downloaded_artists":str,
     }
-    sql_table_name : ClassVar[str] = "tracks"
-    sql_columns     : ClassVar[List[Tuple[str,type]]] = [
+    sql_table_name  = "tracks"
+    sql_columns     = [
         ("!disc_uid",str),
         ("!number",int),
         ("offset",int),
@@ -330,7 +376,7 @@ class Track(DataClass):
         ("downloaded_titles",str),
         ("downloaded_artists",str),
         ]
-    data_class_type : ClassVar[str] = "Track"
+    data_class_type = "Track"
     number       : int
     offset       : int # number of sectors from start of disc
     sectors      : int # number of sectors long
@@ -442,11 +488,11 @@ class Database(object):
     def update_sqlite3(self, db_path:Path) -> None:
         sql3_conn   = sqlite3.connect(str(db_path))
         sql3_cursor = sql3_conn.cursor()
-        for id, album in self.iter_albums():
+        for album_uid, album in self.iter_albums():
             album.sql3_insert_entry(sql3_cursor)
             pass
         sql3_conn.commit()
-        for id, disc in self.iter_discs():
+        for disc_uid, disc in self.iter_discs():
             disc.sql3_insert_entry(sql3_cursor) # will insert entries to the track database
             pass
         sql3_conn.commit()
@@ -472,11 +518,11 @@ class Database(object):
             disc.from_json(d)
             pass
         for t in Track.sql3_iter_entries(sql3_cursor):
-            disc_id_str = t["disc_uid"]
+            t_disc_id_str = t["disc_uid"]
             del t["disc_uid"]
-            disc = self.find_disc_id(disc_id_str)
-            if disc is None: raise Exception("Unknown disc id for track")
-            disc.tracks[t["number"]-1].from_json(t)
+            t_disc = self.find_disc_id(t_disc_id_str)
+            if t_disc is None: raise Exception("Unknown disc id for track")
+            t_disc.tracks[t["number"]-1].from_json(t)
             pass
         sql3_conn.commit()
         sql3_conn.close()
@@ -505,14 +551,14 @@ class Database(object):
         self.discs[uniq_id] = disc
         return disc
     #f find_or_create_album
-    def find_or_create_album(self, album_id_str:str, permit_duplicates:bool) -> Optional[Album]:
+    def find_or_create_album(self, album_id_str:str, permit_duplicates:bool) -> Album:
         album = self.find_album_id(album_id_str)
         if album is not None and not permit_duplicates:
             raise Exception(f"Duplicate album id {album_id_str} in database")
         if album is None: album = self.create_album(album_id_str)
         return album
     #f find_or_create_disc
-    def find_or_create_disc(self, disc_id_str:str, permit_duplicates:bool) -> Optional[Disc]:
+    def find_or_create_disc(self, disc_id_str:str, permit_duplicates:bool) -> Disc:
         disc = self.find_disc_id(disc_id_str)
         if disc is not None and not permit_duplicates:
             raise Exception(f"Duplicate disc id {disc_id_str} in database")
@@ -534,8 +580,8 @@ class Database(object):
                 disc = self.find_or_create_disc(k, permit_duplicates=permit_duplicates)
                 disc.from_json(v)
                 disc.set_json_path(json_path)
-                album = self.album_of_disc(disc)
-                disc.set_album(album)
+                disc_album = self.album_of_disc(disc)
+                disc.set_album(disc_album)
                 pass
             pass
         pass
@@ -577,7 +623,7 @@ class Database(object):
         Run through the database and find all the json paths required to write out
         If a json path is effectively none (".") then put it in library.json?
         """
-        json_files = {}
+        json_files : Dict[str,Tuple[Path,List[UniqueAlbumId],List[UniqueDiscId]]] = {}
         str_root_path = str(root_path)
         p = Path()
         str_p = str(p)
@@ -597,7 +643,7 @@ class Database(object):
             pass
         return json_files
     #f write_json_files
-    def write_json_files(self, root_path:Path):
+    def write_json_files(self, root_path:Path) -> None:
         """
         Write out all changed json files
         """

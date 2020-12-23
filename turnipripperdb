@@ -1,22 +1,13 @@
 #!/usr/bin/env python3
 
 """
-Concept:
-
-rip <device> <disc name guess> <src directory>
-metadata_edit <src directory>
-encode <src directory>
-
 A turnipripperdb has a config file which specifies the database
 It defaults to .turnipripperdb. See config.py
 """
 
 #a Imports
-from libturnipripper.database import Database
 from libturnipripper.config import Config
-from libturnipripper.command import Command
-from libturnipripper.rip import RipCommand
-from libturnipripper.album import AlbumCommand
+from libturnipripper.toplevel import ToplevelCommand, ToplevelArgs
 from pathlib import Path
 import argparse
 import sys
@@ -25,56 +16,27 @@ import traceback
 import typing
 from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
 
-#a Toplevel command
-class ToplevelCommand(Command):
-    name = "turnipripperdb"
-    parser_args = {
-        ("-c", "--config_file"):{
-            "dest":"config_file",
-            "help":"Specify config file",
-            "metavar":"FILE",
-        },
-        ("-v", "--verbose"):{
-            "dest":"verbose",
-            "default":0,
-            "type":int,
-            "help":"Enable verbosity",
-        },
-        ("--debug",):{
-            "dest":"debug",
-            "default":0,
-            "type":int,
-            "help":"Specify debug level",
-        },
-    }
-    subcommands = [
-        RipCommand,
-        AlbumCommand,
-    ]
-    pass
-
 #a Main
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        #add_help=False
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
     cmd = ToplevelCommand(parser)
-    args = parser.parse_args()
+    cmd.parse_args()
 
     config_files = [Path("~/.turnipripperdb"),
                     Path("./.turnipripperdb"),
     ]
-    if args.config_file: config_files.append(Path(args.config_file))
+    if cmd.args.config_file: config_files.append(Path(cmd.args.config_file))
     config = Config()
     config.read_config_files(config_files)
 
     try:
-        args.func(parser, config, args)
+        cmd.invoke(config)
     except Exception as e:
-        if args.debug:
+        if cmd.args.debug_test("any"):
             traceback.print_exc()
             pass
         else:

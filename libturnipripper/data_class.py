@@ -4,6 +4,7 @@ import hashlib
 import base64
 import json
 from libturnipripper import musicbrainz
+from sqlite3 import Cursor
 
 import typing
 from typing import Optional, ClassVar, TypeVar, Type, Iterable, Union, Tuple, List, Dict, Set, Any, cast
@@ -25,11 +26,14 @@ def str_set_as_list(set_str:str, separator:str="###") -> List[str]:
 #c DataClass
 class DataClass(object):
     #f Class variable properties
-    json_prop_types : ClassVar[Dict[str,type]] = {}
+    json_prop_types : ClassVar[Dict[str,Optional[type]]] = {}
     sql_columns     : ClassVar[List[Tuple[str,type]]] = []
     data_class_type : ClassVar[str] = "DataClass"
     sql_table_name  : ClassVar[str] = "sqltable"
     inited_classes  : ClassVar[Set[Type["DataClass"]]] = set()
+
+    # Created at first initialization
+    json_prop_types_list : ClassVar[List[Tuple[str,Optional[type]]]]
     #f ensure_inited
     @classmethod
     def ensure_inited(cls) -> None:
@@ -91,7 +95,7 @@ class DataClass(object):
         return result
     #f sql3_create_table
     @classmethod
-    def sql3_create_table(cls, sql3_cursor) -> None:
+    def sql3_create_table(cls, sql3_cursor:Cursor) -> None:
         sql_column_name_types = []
         keys = []
         for (name,value_type) in cls.sql_columns:
@@ -113,7 +117,7 @@ class DataClass(object):
         sql3_cursor.execute(f"""CREATE TABLE {cls.sql_table_name} ({sql_columns}, PRIMARY KEY({sql_keys}))""")
         pass
     #f sql3_insert_entry
-    def sql3_insert_entry(self, sql3_cursor) -> None:
+    def sql3_insert_entry(self, sql3_cursor:Cursor) -> None:
         sql_columns = []
         for (name,value_type) in self.sql_columns:
             if name[0]=='!': name = name[1:]
@@ -131,7 +135,7 @@ class DataClass(object):
         pass
     #f sql3_iter_entries
     @classmethod
-    def sql3_iter_entries(cls, sql3_cursor) -> Iterable[Dict[str,Any]]:
+    def sql3_iter_entries(cls, sql3_cursor:Cursor) -> Iterable[Dict[str,Any]]:
         sql_columns = []
         for (name,value_type) in cls.sql_columns:
             if name[0]=='!': name = name[1:]
