@@ -112,7 +112,7 @@ class Disc(DataClass):
         self.postset_num_tracks = self.update_track_list
         pass
     #f calculate_cddbid
-    def calculate_cddbid(self) -> None:
+    def calculate_cddbid(self) -> str:
         track_starts = [t.offset for t in self.tracks]
         csum = sum([sum([int(j) for j in list(str(i//75))]) for i in track_starts]) % 255
         if self.tracks!=[]:
@@ -121,11 +121,12 @@ class Disc(DataClass):
         else:
             cd_len = 0
             pass
-        print(f"{csum:02x}{cd_len:04x}{len(track_starts):02x} {len(track_starts)}")
-        print(" ".join([str(t.offset) for t in self.tracks]))
+        cddb_id = f"{csum:02x}{cd_len:04x}{len(track_starts):02x} {len(track_starts)}"
+        cddb_id += " ".join([str(t.offset) for t in self.tracks])
+        cddb_id += str((self.tracks[-1].offset + self.tracks[-1].sectors)//75)
+        # An example:
         # 040cd212 18 150 26015 38464 48627 68170 88165 103005 126862 140072 158965 164937 176260 190682 209952 218515 226970 231152 235790 3284
-        print((self.tracks[-1].offset + self.tracks[-1].sectors)//75)
-        pass
+        return cddb_id
     #f as_json_json_path
     def as_json_json_path(self, v:Path) -> str:
         return str(v)

@@ -63,7 +63,7 @@ class Command:
     def invoke_command(self, toplevel_parser:ArgumentParser, config:Config, args:CommandArgs) -> None:
         self.toplevel_parser = toplevel_parser
         self.config = config
-        self.args = args
+        self.args = self.args_class(args)
         self.do_command()
         pass
     #f do_command

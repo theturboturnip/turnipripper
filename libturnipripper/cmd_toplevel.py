@@ -6,9 +6,9 @@ Toplevel command for turnipripperdb
 """
 
 #a Imports
-from libturnipripper.command import Command, CommandArgs
-from libturnipripper.rip     import RipCommand
-from libturnipripper.album   import AlbumCommand
+from libturnipripper.command     import Command, CommandArgs
+from libturnipripper.cmd_rip     import RipCommand
+from libturnipripper.cmd_album   import AlbumCommand
 
 import typing
 from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast

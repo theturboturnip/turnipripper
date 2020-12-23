@@ -7,7 +7,7 @@ It defaults to .turnipripperdb. See config.py
 
 #a Imports
 from libturnipripper.config import Config
-from libturnipripper.toplevel import ToplevelCommand, ToplevelArgs
+from libturnipripper.cmd_toplevel import ToplevelCommand
 from pathlib import Path
 import argparse
 import sys
