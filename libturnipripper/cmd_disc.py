@@ -94,20 +94,6 @@ class DiscCommand(Command):
     args_class = DiscArgs
     args       : DiscArgs
     subcommands = [DiscListCommand, DiscJsonCommand]
-    #f do_command
-    def do_command(self) -> None:
-        id_re = re.compile(self.args.id)
-        title_re = re.compile(self.args.title)
-        db = Database.from_config(self.config.database)
-        discs = set()
-        for (k,v) in db.iter_discs():
-            if id_re.search(str(k)): discs.add(k)
-            if title_re.search(v.title): discs.add(k)
-            pass
-        for k in discs:
-            print(db.discs[k].as_json())
-            pass
-        pass
     #f all done
     pass
 

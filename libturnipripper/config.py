@@ -121,6 +121,8 @@ class DatabaseConfig(ConfigSection):
     dbfile : Optional[Path]
     json_paths: List[str]
     primary : str
+    def primary_is_json(self):
+        return self.primary=="json"
     pass
                                           
 #c RipConfig

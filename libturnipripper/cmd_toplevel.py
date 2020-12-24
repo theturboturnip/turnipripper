@@ -6,10 +6,11 @@ Toplevel command for turnipripperdb
 """
 
 #a Imports
-from libturnipripper.command     import Command, CommandArgs
-from libturnipripper.cmd_rip     import RipCommand
-from libturnipripper.cmd_album   import AlbumCommand
-from libturnipripper.cmd_disc    import DiscCommand
+from libturnipripper.command      import Command, CommandArgs
+from libturnipripper.cmd_rip      import RipCommand
+from libturnipripper.cmd_album    import AlbumCommand
+from libturnipripper.cmd_disc     import DiscCommand
+from libturnipripper.cmd_database import DatabaseCommand
 
 import typing
 from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
@@ -64,6 +65,7 @@ class ToplevelCommand(Command):
         RipCommand,
         AlbumCommand,
         DiscCommand,
+        DatabaseCommand,
     ]
     pass
 

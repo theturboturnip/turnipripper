@@ -1,6 +1,13 @@
 #a Imports
 import typing
-from typing import Protocol, Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
+from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
+# if python3.X?
+if False:
+    from typing import Protocol
+else:
+    Protocol = object
+    pass
+
 from argparse import ArgumentParser, Namespace
 from .config import Config
 

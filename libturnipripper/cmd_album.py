@@ -1,5 +1,4 @@
 #a Imports
-import re
 import json
 
 from .database import Database
@@ -88,20 +87,6 @@ class AlbumCommand(Command):
     args_class = AlbumArgs
     args       : AlbumArgs
     subcommands = [AlbumListCommand, AlbumJsonCommand]
-    #f do_command
-    def do_command(self) -> None:
-        id_re = re.compile(self.args.id)
-        title_re = re.compile(self.args.title)
-        db = Database.from_config(self.config.database)
-        albums = set()
-        for (k,v) in db.iter_albums():
-            if id_re.search(str(k)): albums.add(k)
-            if title_re.search(v.title): albums.add(k)
-            pass
-        for k in albums:
-            print(db.albums[k].as_json())
-            pass
-        pass
     #f all done
     pass
 

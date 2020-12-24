@@ -21,14 +21,18 @@ def sha1_of(b:bytes) -> str:
     return sha1.hexdigest()
 
 #a Database
+#c Exceptions
+class DatabaseOpenError(Exception): pass
+class DatabaseConfigError(Exception): pass
 #c Database
 class Database(object):
+    config : DatabaseConfig
     albums  : Dict[UniqueAlbumId, Album]
     discs   : Dict[UniqueDiscId, Disc]
     tracks  : Dict[UniqueDiscId, List[Track]]
     #f __init__
-    def __init__(self, database_path:Path) -> None:
-        self.database_path = database_path
+    def __init__(self, config:DatabaseConfig) -> None:
+        self.config = config
         self.albums = {}
         self.discs = {}
         self.tracks = {}
@@ -36,17 +40,23 @@ class Database(object):
     #f from_config
     @classmethod
     def from_config(cls, config:DatabaseConfig) -> "Database":
-        db = cls(database_path=config.root)
-        if config.primary=="json":
+        db = cls(config)
+        if config.primary_is_json():
+            files_read = 0
             for json_glob in config.json_paths:
-                db.read_json_files(json_glob)
+                files_read += db.read_json_files(json_glob)
                 pass
+            if files_read==0:
+                raise DatabaseOpenError("No database json files could be read")
             pass
         else:
-            if config.dbfile is None: raise Exception("Database has a primary of sqlite but no dbfile")
-            db.read_sqlite3(db_path=config.dbfile)
+            if config.dbfile is None: raise DatabaseConfigError("Database has a primary of sqlite but no dbfile")
+            db.read_sqlite3(db_path=db.joinpath(config.dbfile))
             pass
         return db
+    #f joinpath
+    def joinpath(self, *paths:Any) -> Path:
+        return self.config.root.joinpath(*paths)
     #f create_sqlite3
     def create_sqlite3(self, db_path:Path) -> None:
         sql3_conn   = sqlite3.connect(str(db_path))
@@ -74,9 +84,13 @@ class Database(object):
         pass
     #f read_sqlite3
     def read_sqlite3(self, db_path:Path) -> None:
-        db_path = self.database_path.joinpath(db_path)
         print(f"Reading sqlite3 database {db_path}")
-        sql3_conn   = sqlite3.connect(str(db_path))
+        try:
+            sql3_conn   = sqlite3.connect(str(db_path))
+            pass
+        except Exception as e:
+            raise DatabaseOpenError(f"Failed to open sql database {db_path} with {e}")
+            pass
         sql3_cursor = sql3_conn.cursor()
         for d in Album.sql3_iter_entries(sql3_cursor):
             album_id_str = d["uniq_id"]
@@ -102,16 +116,18 @@ class Database(object):
         sql3_conn.close()
         pass
     #f read_json_files
-    def read_json_files(self, pattern:str, subpaths:List[str]=[], verbose:bool=False) -> None:
-        base_path = self.database_path.joinpath(*subpaths)
+    def read_json_files(self, pattern:str, subpaths:List[str]=[], verbose:bool=False) -> int:
+        files_read = 0
+        base_path = self.joinpath(*subpaths)
         for p in base_path.glob(pattern):
             if verbose:print(p)
             with p.open() as f:
                 json_data = json.load(f)
                 self.add_json(p, json_data)
+                files_read += 1
                 pass
             pass
-        pass
+        return files_read
     #f create_album
     def create_album(self, uniq_id_str:str) -> Album:
         uniq_id = UniqueAlbumId.from_str(uniq_id_str)
@@ -192,13 +208,16 @@ class Database(object):
             pass
         pass
     #f enumerate_json_paths
-    def enumerate_json_paths(self, root_path:Path) -> Dict[str,Tuple[Path,List[UniqueAlbumId],List[UniqueDiscId]]]:
+    def enumerate_json_paths(self, root_path:Path, must_use_root:bool=False) -> Dict[str,Tuple[Path,List[UniqueAlbumId],List[UniqueDiscId]]]:
         """
         Run through the database and find all the json paths required to write out
         If a json path is effectively none (".") then put it in library.json?
         """
         json_files : Dict[str,Tuple[Path,List[UniqueAlbumId],List[UniqueDiscId]]] = {}
         str_root_path = str(root_path)
+        if must_use_root:
+            json_files[str_root_path] = (root_path, [], [])
+            pass
         p = Path()
         str_p = str(p)
         for (album_id, album) in self.iter_albums():
@@ -217,17 +236,18 @@ class Database(object):
             pass
         return json_files
     #f write_json_files
-    def write_json_files(self, root_path:Path) -> None:
+    def write_json_files(self, root_path:Path, must_use_root:bool=False) -> None:
         """
         Write out all changed json files
         """
-        json_files = self.enumerate_json_paths(root_path)
+        json_files = self.enumerate_json_paths(root_path, must_use_root)
         for (s,(path,album_ids,disc_ids)) in json_files.items():
             json_data = {"albums":self.albums_as_json(album_ids),
                          "discs" :self.discs_as_json(disc_ids),
             }
             json_str = json.dumps(json_data, indent=1).encode("utf8")
             must_write = True
+            path = self.joinpath(path)
             if path.is_file():
                 json_hash = sha1_of(json_str)
                 with path.open("rb") as f:
