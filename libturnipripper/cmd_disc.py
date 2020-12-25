@@ -75,7 +75,7 @@ class DiscListCommand(DiscShowCommand):
             disc = cast(Disc,disc)
             disc_json = disc.as_json()
             if not self.args.include_tracks: del disc_json["tracks"]
-            print(disc.uniq_id,disc_json())
+            print(disc.uniq_id,disc_json)
             pass
         pass
     #f All done

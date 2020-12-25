@@ -77,6 +77,7 @@ class Disc(DataClass):
     rip_time : str
     downloaded_titles : str
     downloaded_artists : str
+    output_title : str
     album         : Optional[Album]
     tracks        : List["Track"]
     json_path     : Path
@@ -109,7 +110,10 @@ class Disc(DataClass):
         self.album = None
         self.tracks = []
         self.json_path = Path()
+        self.output_title = ""
         self.postset_num_tracks = self.update_track_list
+        self.postset_downloaded_titles = self.create_output_title
+        self.postset_title = self.create_output_title
         pass
     #f calculate_cddbid
     def calculate_cddbid(self) -> str:
@@ -210,6 +214,18 @@ class Disc(DataClass):
         self.tracks[number-1].add_download_track_data(dd)
         pass
             
+    #f create_output_title
+    def create_output_title(self) -> None:
+        if self.title!="":
+            self.output_title = self.title
+            pass
+        elif self.downloaded_titles!="":
+            self.output_title = str_set_as_list(self.downloaded_titles)[0]
+            pass
+        else:
+            self.output_title = f"{self.disc.disc_of_set_str()}"
+            pass
+        pass
     #f All done
     pass
 

@@ -133,6 +133,8 @@ class RipConfig(ConfigSection):
     }
     source_root: Path
     default_dir : str
+    def joinpath(self, *paths:Any) -> Path:
+        return self.source_root.joinpath(*paths)
     pass
 
 #c EncodeConfig

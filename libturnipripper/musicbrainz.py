@@ -306,6 +306,7 @@ class MusicbrainzID(DataClass):
         self.offsets = [0,0]
         self.mb_id = ""
         self.postset_string = self.extract_data
+        self.extract_data()
         pass
     #f from_json_offsets - no need for as_json_offsets
     def from_json_offsets(self, v:List[int]) -> None:
@@ -331,6 +332,7 @@ class MusicbrainzID(DataClass):
         return d
     #f extract_data
     def extract_data(self) -> None:
+        if self.string=="": return
         musicbrainz_data = [int(x) for x in self.string.split(" ")]
         if len(musicbrainz_data)>0:
             self.last  = musicbrainz_data[0]
@@ -342,13 +344,15 @@ class MusicbrainzID(DataClass):
     #f calculate_hash
     def calculate_hash(self) -> str:
         sha = hashlib.sha1()
-        sha.update(f"{self.first:02X}{self.last:02x}".encode("utf8"))
+        sha.update(f"{self.first:02X}{self.last:02X}".encode("utf8"))
         for i in range(100):
             off = 0
             if i<len(self.offsets): off=self.offsets[i]
             sha.update(f"{off:08X}".encode("utf8"))
             pass
         return base64.b64encode(sha.digest(),altchars=b"._").replace(b"=",b"-").decode("utf8")
+    #f __str__
+    def __str__(self) -> str:
+        return f"{self.mb_id} {self.first} {self.last} {self.offsets}"
     #f All done
     pass
-    

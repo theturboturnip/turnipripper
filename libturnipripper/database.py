@@ -5,6 +5,7 @@ import base64
 import json
 import sqlite3
 from .data_class import DataClass, str_add_to_set, str_set_as_list
+from .disc_info import DiscInfo
 from .config import DatabaseConfig
 from .db_album import UniqueAlbumId, Album
 from .db_disc import UniqueDiscId, Disc, Track
@@ -284,13 +285,20 @@ class Database(object):
                 return v
             pass
         return None
-    #f find_disc_of_musicbrainz_id
-    def find_disc_of_musicbrainz_id(self, musicbrainz_id:str) -> Optional[Disc]:
+    #f discs_with_musicbrainz_id
+    def discs_with_musicbrainz_id(self, musicbrainz_id:str) -> Iterable[Disc]:
         for (k,v) in self.discs.items():
             if v.musicbrainz_id == musicbrainz_id:
-                return v
+                yield v
             pass
-        return None
+        pass
+    #f discs_with_cddb_id
+    def discs_with_cddb_id(self, cddb_id:str) -> Iterable[Disc]:
+        for (k,v) in self.discs.items():
+            if v.cddb_id == cddb_id:
+                yield v
+            pass
+        pass
     #f find_disc_id
     def find_disc_id(self, disc_id:str) -> Optional[Disc]:
         for (k,v) in self.discs.items():
@@ -313,7 +321,11 @@ class Database(object):
             pass
         if disc is None: return False
         if disc.musicbrainz_id=="": return False
-        mb = MusicbrainzRecordings.of_query(disc.musicbrainz_id)
+        try:
+            mb = MusicbrainzRecordings.of_query(disc.musicbrainz_id)
+            pass
+        except:
+            return False
         pressing = mb.find_pressing(disc.musicbrainz_id)
         if pressing is None: return False
         for (number,dd) in pressing.iter_download_track_data():
@@ -326,6 +338,34 @@ class Database(object):
         album.add_download_data(pressing.get_album_download_data())
         disc.set_album(album)
         return True
+    #f find_discs_of_disc_info
+    def find_discs_of_disc_info(self, disc_info:DiscInfo) -> List[Disc]:
+        disc_uids = set()
+        mb_id = disc_info.musicbrainz_id.mb_id
+        cddb_id = disc_info.cddb_id.cddb_id
+        if mb_id!="":
+            for d in self.discs_with_musicbrainz_id(mb_id):
+                disc_uids.add(d.uniq_id)
+                pass
+            pass
+        if cddb_id!="":
+            for d in self.discs_with_cddb_id(cddb_id):
+                disc_uids.add(d.uniq_id)
+                pass
+            pass
+        discs = []
+        for uid in disc_uids:
+            discs.append(self.discs[uid])
+            pass
+        return discs
+    #f find_or_create_disc_of_disc_info
+    def find_or_create_disc_of_disc_info(self, disc_info:DiscInfo, src_directory:Path) -> Tuple[int,Optional[Disc]]:
+        discs = self.find_discs_of_disc_info(disc_info)
+        for d in discs:
+            if d.src_directory == str(src_directory):
+                return (-1,d)
+            pass
+        return (len(discs),None)
     #f All done
     pass
 

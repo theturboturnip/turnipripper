@@ -18,6 +18,25 @@ class CommandCallback(Protocol):
 
 class CommandArgs(Namespace):
     func : CommandCallback
+    verbose:int
+    debug:int
+    verbose_levels : ClassVar[Dict[str,int]] = {
+        "info":1,
+        "note":2,
+        "warning":3,
+        "error":4,
+        }
+    debug_levels : ClassVar[Dict[str,int]] = {
+        "any":1,
+        }
+    def verbose_out(self, level:str, message:str) -> None:
+        if self.verbose_levels[level] <= self.verbose:
+            print(message)
+            pass
+        pass
+    def debug_test(self, reason:str) -> bool:
+        print( self.debug_levels[reason] , self.debug)
+        return self.debug_levels[reason] <= self.debug
     def __init__(self, args:Namespace) -> None:
         for (k,v) in vars(args).items():
             setattr(self, k, v)
@@ -34,10 +53,23 @@ class Command:
     """
     #v properties
     name : ClassVar[str] = "subcommand_name"
-    parser_args: ClassVar[Dict[Union[Tuple[str],Tuple[str,str]],Dict[str,Any]]] = {}
     subcommands : ClassVar[List[Type["Command"]]] = []
     parser : ArgumentParser
     args_class : ClassVar[Type[CommandArgs]] = CommandArgs
+    parser_args: ClassVar[Dict[Union[Tuple[str],Tuple[str,str]],Dict[str,Any]]] = {
+        ("-v", "--verbose"):{
+            "dest":"verbose",
+            "default":0,
+            "type":int,
+            "help":"Enable verbosity",
+        },
+        ("--debug",):{
+            "dest":"debug",
+            "default":0,
+            "type":int,
+            "help":"Specify debug level",
+        },
+    }
 
     #v properties set on invocation
     toplevel_parser : ArgumentParser
