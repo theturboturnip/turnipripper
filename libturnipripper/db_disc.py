@@ -234,11 +234,32 @@ class Disc(DataClass):
             self.output_title = f"{self.disc_of_set_str()}"
             pass
         pass
+    #f get_title
+    def get_title(self) -> str:
+        self.create_output_title()
+        return self.output_title
+    #f get_track_title
+    def get_track_title(self, track:int) -> str:
+        return self.tracks[track].get_title()
+    #f iter_metadata
+    def iter_metadata(self, track:int) -> Iterable[Tuple[str,str]]:
+        metadata = self.tracks[track].get_metadata()
+        metadata["album"] = self.output_title
+        metadata["album_artist"] = self.artist
+        metadata["track"] = f"{track+1}/{self.num_tracks}"
+        if self.album is not None and self.album.num_discs>1:
+            metadata["disc"] = f"{self.disc_of_set}/{self.album.num_discs}"
+            pass
+        for (k,v) in metadata.items():
+            yield((k,v))
+            pass
+        pass        
     #f All done
     pass
 
 #c Track
 class Track(DataClass):
+    #v Properties
     json_prop_types = {
         "number":int,
         "offset":int,
@@ -324,6 +345,17 @@ class Track(DataClass):
             self.output_title = f"Track {self.number} of {self.disc.num_tracks}{self.disc.disc_of_set_str()}"
             pass
         pass
+    #f get_title
+    def get_title(self) -> str:
+        self.create_output_title()
+        return self.output_title
+    #f get_metadata
+    def get_metadata(self) -> Dict[str,str]:
+        self.create_output_title()
+        metadata = {"title":self.output_title,
+                    "artist":"self.artist",
+            }
+        return metadata        
     #f __str__
     def __str__(self) -> str:
         r = f"{self.number}:{self.offset}:{self.sectors}:{self.length_seconds}:{self.downloaded_titles}"
@@ -336,10 +368,14 @@ class DiscFilter(DataClassFilter):
     order_keys = {
         "title":"output_title",
         "id":"uniq_id",
+        "cddb":"cddb_id",
+        "musicbrainz":"musicbrainz_id",
         }
     filter_keys = {
         "title":("re","output_title"),
         "id":   ("re","uniq_id"),
+        "cddb": ("re","cddb_id"),
+        "musicbrainz": ("re","musicbrainz_id"),
         }
     pass
 

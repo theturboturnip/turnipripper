@@ -5,6 +5,7 @@ import json
 from .database import Database
 from .db_disc import Disc, DiscSet, DiscFilter
 from .command import Command, CommandArgs
+from .encode import Encoder
 
 import typing
 from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
@@ -16,6 +17,8 @@ from .config import Config
 class DiscArgs(CommandArgs):
     id:str
     title:str
+    cddb:str
+    musicbrainz:str
     order_by:str
     include_tracks:bool
     def create_filter(self) -> DiscFilter:
@@ -23,6 +26,8 @@ class DiscArgs(CommandArgs):
         if self.order_by!="":    filter.order_by(self.order_by)
         if self.id!="":    filter.add_filter("id", self.id)
         if self.title!="": filter.add_filter("title", self.title)
+        if self.musicbrainz!="": filter.add_filter("musicbrainz", self.musicbrainz)
+        if self.cddb!="":        filter.add_filter("cddb", self.cddb)
         return filter
     pass
     
@@ -81,19 +86,44 @@ class DiscListCommand(DiscShowCommand):
     #f All done
     pass
 
+#c DiscEncodeCommand
+class DiscEncodeCommand(Command):
+    #v Properties
+    args_class = DiscArgs
+    args       : DiscArgs
+    name = "encode"
+    #f do_command
+    def do_command(self) -> None:
+        db = Database.from_config(self.config.database)
+        discs = DiscSet()
+        filter = self.args.create_filter()
+        for (uid,disc) in db.iter_discs():
+            discs.add_if(filter, uid, disc)
+            pass
+        e = Encoder(db, self.config)
+        for d in discs.iter_ordered():
+            print(f"Will encode {d}")
+            e.encode(d)
+            pass
+        pass
+    #f All done
+    pass
+
 #c DiscCommand
 class DiscCommand(Command):
     #v Properties
     name = "disc"
     parser_args = {
         ("--id",):{"type":str, "default":"", "help":"Regular expression to match id with"},
+        ("--cddb",):{"type":str, "default":"", "help":"Regular expression to match cddb_id with"},
+        ("--musicbrainz",):{"type":str, "default":"", "help":"Regular expression to match musicbrainz id with"},
         ("--title",):{"type":str, "default":"", "help":"Regular expression to match title with"},
         ("--order_by",):{"type":str, "default":"", "help":"How to order the output"},
         ("--include_tracks",):{"action":"store_true", "default":False, "help":"Include tracks in output"},
         }
     args_class = DiscArgs
     args       : DiscArgs
-    subcommands = [DiscListCommand, DiscJsonCommand]
+    subcommands = [DiscListCommand, DiscJsonCommand, DiscEncodeCommand]
     #f all done
     pass
 

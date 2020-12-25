@@ -141,6 +141,9 @@ class RipConfig(ConfigSection):
     default_dir : str
     def joinpath(self, *paths:Any) -> Path:
         return self.source_root.joinpath(*paths)
+    #f relative_path
+    def relative_path(self, path:Path) -> Path:
+        return path.relative_to(self.source_root)
     pass
 
 #c EncodeConfig
