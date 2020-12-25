@@ -21,11 +21,6 @@ class DatabaseInitCommand(Command):
     args_class = DatabaseInitArgs
     args       : DatabaseInitArgs
     parser_args = {
-        ("--json",):{
-            "default":"",
-            "help":"Specify toplevel JSON file if initializing json",
-            "metavar":"FILE",
-        },
         }
     #f do_command
     def do_command(self) -> None:
@@ -41,9 +36,7 @@ class DatabaseInitCommand(Command):
             raise Exception("Database already exists, it would be bad form to init again")
         db = Database(self.config.database)
         if self.config.database.primary_is_json():
-            if self.args.json=="":
-                raise Exception("Json database requires a file to be specified")
-            json_path = Path(self.args.json)
+            json_path = Path(self.config.database.json_root)
             db.write_json_files(json_path, must_use_root=True)
             pass
         else:

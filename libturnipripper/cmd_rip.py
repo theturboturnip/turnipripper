@@ -57,21 +57,29 @@ class RipCommand(Command):
                 subdirectory = disc_info.musicbrainz_id.mb_id
                 pass
             pass
+        rip_directory = db.joinpath(self.config.rip.joinpath(subdirectory))
 
         uniq_id_str = ""
         if self.args.uniq_id!="": uniq_id_str=self.args.uniq_id
         (matches, opt_disc) = db.find_or_create_disc_of_disc_info(disc_info, subdirectory)
+        # Set disc.json_path
+        # Set disc.src_directory
         if matches<0: # Disc already in system at same rip directory
             assert opt_disc is not None
             disc = opt_disc
             pass
         elif matches==0: # Disc not in system
             disc = db.create_disc(uniq_id_str=uniq_id_str)
-            disc.musicbrainz_id = disc_info.musicbrainz_id.mb_id
+            disc.src_directory = str(subdirectory)
+            if self.config.database.discs_in_own_json():
+                disc.json_path = db.relative_path(rip_directory.joinpath(self.config.database.json_disc))
+                pass
             pass
         else: # Disc in system but none have same rip directory
+            print(matches, opt_disc)
             raise Exception("Disc may already be in system")
             pass
+        disc.update_from_disc_info(disc_info)
         if not self.args.no_musicbrainz:
             print(f"Fetching from musicbrainz id {disc.musicbrainz_id}")
             if db.fetch_mb_disc_data(disc):
@@ -82,13 +90,12 @@ class RipCommand(Command):
                 pass
             pass
         if self.config.database.primary_is_json():
-            db.write_json_files(Path("library.json"))
+            db.write_json_files(self.config.database.json_root)
             pass
         else:
             db.update_sqlite3(db_path=db.joinpath(self.config.database.dbfile))
             pass
 
-        rip_directory = db.joinpath(self.config.rip.joinpath(subdirectory))
         self.args.verbose_out("info",f"Rip to directory {rip_directory}")
         if rip_directory.exists() and not self.args.rerip:
             raise Exception(f"Path {rip_directory} already exists and not a rerip")

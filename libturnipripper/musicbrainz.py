@@ -308,6 +308,31 @@ class MusicbrainzID(DataClass):
         self.postset_string = self.extract_data
         self.extract_data()
         pass
+    #f id_as_str
+    def id_as_str(self) -> str:
+        return self.mb_id
+    #f as_string
+    def as_string(self) -> str:
+        if self.string!="": return self.string
+        s = f"{self.last} "
+        s += " ".join(str(o) for o in self.offsets[1:])
+        s += f"{self.offsets[0]} "
+        return s
+    #f num_tracks
+    def num_tracks(self) -> int:
+        return len(self.offsets)-1
+    #f offset_extents
+    def offset_extents(self) -> Iterable[Tuple[int,int,int]]:
+        n = self.num_tracks()
+        for i in range(n):
+            if i==n-1:
+                yield( (i,self.offsets[i+1],self.offsets[0]-self.offsets[i+1]) )
+                pass
+            else:
+                yield( (i,self.offsets[i+1],self.offsets[i+2]-self.offsets[i+1]) )
+                pass
+            pass
+        pass
     #f from_json_offsets - no need for as_json_offsets
     def from_json_offsets(self, v:List[int]) -> None:
         assert(type(v)==list)
@@ -328,7 +353,17 @@ class MusicbrainzID(DataClass):
             pass
         string += f" {extent}"
         d = cls(string)
-        d.extract_data()
+        return d
+    #f of_offsets_last_extent
+    @classmethod
+    def of_offsets_last_extent(cls:Type[T2], offsets:List[int], last_extent:int) -> T2:
+        extent = offsets[-1] + last_extent
+        string = f"{len(offsets)}"
+        for o in offsets:
+            string += f" {o}"
+            pass
+        string += f" {extent}"
+        d = cls(string)
         return d
     #f extract_data
     def extract_data(self) -> None:

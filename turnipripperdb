@@ -26,15 +26,15 @@ def main() -> None:
     cmd = ToplevelCommand(parser)
     cmd.parse_args()
 
-    config_files = [Path("~/.turnipripperdb"),
-                    Path("./.turnipripperdb"),
+    config_files = [(False,Path("~/.turnipripperdb")),
+                    (False,Path("./.turnipripperdb")),
     ]
-    if cmd.args.config_file: config_files.append(Path(cmd.args.config_file))
+    if cmd.args.config_file: config_files.append((True,Path(cmd.args.config_file)))
     config = Config()
-    config.read_config_files(config_files)
-
     try:
+        config.read_config_files(config_files)
         cmd.invoke(config)
+        pass
     except Exception as e:
         if cmd.args.debug_test("any"):
             traceback.print_exc()

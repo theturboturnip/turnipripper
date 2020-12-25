@@ -4,6 +4,7 @@ import json
 import sqlite3
 from .data_class import DataClass, DataClassSet, DataClassFilter, str_add_to_set, str_set_as_list
 from .unique_id import UniqueId
+from .disc_info import DiscInfo
 from .db_album import Album
 
 from .db_types import *
@@ -20,6 +21,7 @@ class Disc(DataClass):
     #v Properties
     json_prop_types = {
         "cddb_id":str,
+        "cddb_string":str,
         "num_tracks":int,
         "src_directory":str,
         "album_uniq_id":str,
@@ -43,6 +45,7 @@ class Disc(DataClass):
     sql_columns      = [
         ("!uniq_id",str),
         ("cddb_id",str),
+        ("cddb_string",str),
         ("num_tracks",int),
         ("src_directory",str),
         ("album_uniq_id",str),
@@ -62,6 +65,7 @@ class Disc(DataClass):
         ]
     uniq_id   : UniqueDiscId
     cddb_id       : str
+    cddb_string   : str
     num_tracks    : int
     src_directory : str
     album_uniq_id : str
@@ -93,7 +97,8 @@ class Disc(DataClass):
             pass
         self.src_directory = ""
         self.album_uniq_id = ""
-        self.cddb_id  = ""
+        self.cddb_id      = ""
+        self.cddb_string  = ""
         self.num_tracks = 0
         self.total_length = 0
         self.musicbrainz_string = ""
@@ -115,22 +120,25 @@ class Disc(DataClass):
         self.postset_downloaded_titles = self.create_output_title
         self.postset_title = self.create_output_title
         pass
-    #f calculate_cddbid
-    def calculate_cddbid(self) -> str:
-        track_starts = [t.offset for t in self.tracks]
-        csum = sum([sum([int(j) for j in list(str(i//75))]) for i in track_starts]) % 255
-        if self.tracks!=[]:
-            cd_len = (self.tracks[-1].offset + self.tracks[-1].sectors - self.tracks[0].offset)//75
+    #f update_from_disc_info
+    def update_from_disc_info(self, disc_info:DiscInfo) -> None:
+        self.musicbrainz_id     = disc_info.musicbrainz_id.id_as_str()
+        self.musicbrainz_string = disc_info.musicbrainz_id.as_string()
+        self.cddb_id            = disc_info.cddb_id.id_as_str()
+        self.cddb_string        = disc_info.cddb_id.as_string()
+        if self.num_tracks==0:
+            self.num_tracks = disc_info.num_tracks
+            self.update_track_list()
             pass
-        else:
-            cd_len = 0
+        if self.num_tracks == disc_info.num_tracks:
+            for i in range(self.num_tracks):
+                t=disc_info.tracks[i]
+                self.tracks[i].offset = t.lba_offset
+                self.tracks[i].sectors = t.lba_extent
+                self.tracks[i].length_seconds = (t.lba_extent+74)//75
+                pass
             pass
-        cddb_id = f"{csum:02x}{cd_len:04x}{len(track_starts):02x} {len(track_starts)}"
-        cddb_id += " ".join([str(t.offset) for t in self.tracks])
-        cddb_id += str((self.tracks[-1].offset + self.tracks[-1].sectors)//75)
-        # An example:
-        # 040cd212 18 150 26015 38464 48627 68170 88165 103005 126862 140072 158965 164937 176260 190682 209952 218515 226970 231152 235790 3284
-        return cddb_id
+        pass
     #f as_json_json_path
     def as_json_json_path(self, v:Path) -> str:
         return str(v)
@@ -223,7 +231,7 @@ class Disc(DataClass):
             self.output_title = str_set_as_list(self.downloaded_titles)[0]
             pass
         else:
-            self.output_title = f"{self.disc.disc_of_set_str()}"
+            self.output_title = f"{self.disc_of_set_str()}"
             pass
         pass
     #f All done

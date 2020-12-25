@@ -35,7 +35,6 @@ class CommandArgs(Namespace):
             pass
         pass
     def debug_test(self, reason:str) -> bool:
-        print( self.debug_levels[reason] , self.debug)
         return self.debug_levels[reason] <= self.debug
     def __init__(self, args:Namespace) -> None:
         for (k,v) in vars(args).items():
@@ -57,18 +56,6 @@ class Command:
     parser : ArgumentParser
     args_class : ClassVar[Type[CommandArgs]] = CommandArgs
     parser_args: ClassVar[Dict[Union[Tuple[str],Tuple[str,str]],Dict[str,Any]]] = {
-        ("-v", "--verbose"):{
-            "dest":"verbose",
-            "default":0,
-            "type":int,
-            "help":"Enable verbosity",
-        },
-        ("--debug",):{
-            "dest":"debug",
-            "default":0,
-            "type":int,
-            "help":"Specify debug level",
-        },
     }
 
     #v properties set on invocation
@@ -92,7 +79,8 @@ class Command:
         pass
     #f parse_args
     def parse_args(self, **kwargs:Any) -> None:
-        self.args = self.args_class(self.parser.parse_args(**kwargs))
+        parsed_args = self.parser.parse_args(**kwargs)
+        self.args = self.args_class(parsed_args)
         pass
     #f invoke
     def invoke(self, config:Config) -> None:

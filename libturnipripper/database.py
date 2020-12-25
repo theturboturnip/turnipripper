@@ -44,8 +44,13 @@ class Database(object):
         db = cls(config)
         if config.primary_is_json():
             files_read = 0
+            try:
+                files_read += db.read_json_files(subpaths=[config.json_root])
+                pass
+            except FileNotFoundError:
+                raise DatabaseOpenError(f"Root json database file {config.json_root} could not be found")
             for json_glob in config.json_paths:
-                files_read += db.read_json_files(json_glob)
+                files_read += db.read_json_files(pattern=json_glob)
                 pass
             if files_read==0:
                 raise DatabaseOpenError("No database json files could be read")
@@ -58,6 +63,9 @@ class Database(object):
     #f joinpath
     def joinpath(self, *paths:Any) -> Path:
         return self.config.root.joinpath(*paths)
+    #f relative_path
+    def relative_path(self, path:Path) -> Path:
+        return path.relative_to(self.config.root)
     #f create_sqlite3
     def create_sqlite3(self, db_path:Path) -> None:
         sql3_conn   = sqlite3.connect(str(db_path))
@@ -117,15 +125,23 @@ class Database(object):
         sql3_conn.close()
         pass
     #f read_json_files
-    def read_json_files(self, pattern:str, subpaths:List[str]=[], verbose:bool=False) -> int:
+    def read_json_files(self, pattern:Optional[str]=None, subpaths:List[str]=[]) -> int:
         files_read = 0
         base_path = self.joinpath(*subpaths)
-        for p in base_path.glob(pattern):
-            if verbose:print(p)
-            with p.open() as f:
+        if pattern is None:
+            with base_path.open() as f:
                 json_data = json.load(f)
-                self.add_json(p, json_data)
+                self.add_json(base_path, json_data)
                 files_read += 1
+                pass
+            pass
+        else:
+            for p in base_path.glob(pattern):
+                with p.open() as f:
+                    json_data = json.load(f)
+                    self.add_json(p, json_data)
+                    files_read += 1
+                    pass
                 pass
             pass
         return files_read
@@ -163,14 +179,14 @@ class Database(object):
             for (k,v) in json_dict["albums"].items():
                 album = self.find_or_create_album(k, permit_duplicates=permit_duplicates)
                 album.from_json(v)
-                album.set_json_path(json_path)
+                album.set_json_path(self.relative_path(json_path))
                 pass
             pass
         if "discs" in json_dict:
             for (k,v) in json_dict["discs"].items():
                 disc = self.find_or_create_disc(k, permit_duplicates=permit_duplicates)
                 disc.from_json(v)
-                disc.set_json_path(json_path)
+                disc.set_json_path(self.relative_path(json_path))
                 disc_album = self.album_of_disc(disc)
                 disc.set_album(disc_album)
                 pass

@@ -62,7 +62,7 @@ class ConfigSection:
     def init_path(t:Tuple[str,str]) -> Path: return Path()
     #f set_path
     def set_path(self, k:str, s:str) -> None:
-        setattr(self, k, Path(s))
+        setattr(self, k, Path(s).expanduser())
         pass
     #f init_list_path
     @staticmethod
@@ -114,15 +114,21 @@ class DatabaseConfig(ConfigSection):
     elements = {
         "root":("path",""),
         "dbfile":("opt_path",""),
+        "json_root":("path","library.json"),
         "json_paths":("list_glob",""),
+        "json_disc":("str",""),
         "primary":("option","json,sqlite"),
     }
     root: Path
     dbfile : Optional[Path]
+    json_root: Path
+    json_disc: str
     json_paths: List[str]
     primary : str
     def primary_is_json(self):
         return self.primary=="json"
+    def discs_in_own_json(self):
+        return self.json_disc!=""
     pass
                                           
 #c RipConfig
@@ -166,9 +172,13 @@ class Config:
             pass
         pass
     #f read_config_files
-    def read_config_files(self, config_files:List[Path]) -> None:
+    def read_config_files(self, config_files:List[Tuple[bool,Path]]) -> None:
         config = configparser.SafeConfigParser()
-        config.read(config_files)
+        for (required, path) in config_files:
+            read_paths = config.read([path])
+            if required and read_paths==[]:
+                raise Exception(f"Failed to read configuration file {path}")
+            pass
         for k in config.sections():
             if k not in self.sections: raise Exception(f"Bad section f{k} in configuration")
             self.sections[k].from_dict(dict(config.items(section=k)))
@@ -176,7 +186,7 @@ class Config:
         pass
     #f __str__
     def __str__(self) -> str:
-        r = "Config ["
+        r = "["
         for (k,s) in self.sections.items():
             r+=f"{k}:{s.as_dict()}, "
             pass

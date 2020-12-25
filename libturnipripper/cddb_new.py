@@ -279,6 +279,7 @@ class CddbID(DataClass):
     data_class_type : ClassVar[str] = "CddbId"
     string : str
     cddb_id : str
+    cddb_id_int : int
     offsets : List[int]
     last_sector : int
     last_sector_error : int
@@ -287,11 +288,35 @@ class CddbID(DataClass):
     def __init__(self, string:str) -> None:
         self.string = string
         self.cddb_id = ""
+        self.cddb_id_int = 0
         self.offsets = []
+        self.length_in_seconds = 0
         self.last_sector = 0
         self.last_sector_error = 0
         self.postset_string = self.extract_data
+        if self.string!="": self.extract_data()
         pass
+    #f of_offsets_length
+    @classmethod
+    def of_offsets_length(cls:Type[T], track_offsets:List[int], length_in_seconds:int) -> T:
+        last_sector_min = length_in_seconds*75
+        d=cls("")
+        d.length_in_seconds = length_in_seconds
+        d.offsets = track_offsets[:]
+        d.last_sector = last_sector_min
+        d.last_sector_error = 74 # for now
+        (d.cddb_id, d.string) = d.cddb_data_of_offsets_length(d.offsets, d.length_in_seconds)
+        d.cddb_id_int = int(d.cddb_id,16)
+        return d
+    #f cddb_data_of_offsets_length
+    @staticmethod
+    def cddb_data_of_offsets_length(track_offsets:List[int], length_in_seconds:int) -> Tuple[str,str]:
+        csum = sum([sum([int(j) for j in list(str(i//75))]) for i in track_offsets]) % 255
+        cddb_id = f"{csum:02x}{length_in_seconds:04x}{len(track_offsets):02x}"
+        cddb_string = f"{cddb_id} {len(track_offsets)} "
+        cddb_string += " ".join([str(o) for o in track_offsets])
+        cddb_string += f" {length_in_seconds}"
+        return (cddb_id, cddb_string)
     #f of_disc
     @classmethod
     def of_disc(cls:Type[T], tracks:List[Any]) -> T:
@@ -305,8 +330,18 @@ class CddbID(DataClass):
         d.string = f"{d.cddb_id} {len(d.offsets)} "
         d.string += " ".join([str(o) for o in d.offsets])
         d.string += f" {d.last_sector//75}"
+        d.cddb_id_int = int(d.cddb_id,16)
         # 040cd212 18 150 26015 38464 48627 68170 88165 103005 126862 140072 158965 164937 176260 190682 209952 218515 226970 231152 235790 3284
         return d
+    #f id_as_str
+    def id_as_str(self) -> str:
+        return self.cddb_id
+    #f as_string
+    def as_string(self) -> str:
+        return self.string
+    #f as_int
+    def as_int(self) -> int:
+        return self.cddb_id_int
     #f extract_data
     def extract_data(self) -> None:
         string_list = self.string.split(" ")
@@ -314,10 +349,11 @@ class CddbID(DataClass):
         self.cddb_id = string_list[0]
         num_tracks = int(string_list[1])
         if num_tracks+3 != len(string_list): return
+        self.cddb_id_int = int(self.cddb_id, 16)
         offsets = [int(s) for s in string_list[2:-1]]
         length_in_seconds = int(string_list[-1])
         last_sector_min = length_in_seconds*75
-        self.offsets = offsets
+        self.offsets     = offsets
         self.last_sector = last_sector_min
         self.last_sector_error = 74 # for now
         pass
