@@ -1,6 +1,8 @@
 #a Imports
 from sqlite3 import Cursor
 import re
+import json
+from .edit import Editor
 
 from .db_types import *
 import typing
@@ -23,6 +25,7 @@ def str_set_as_list(set_str:str, separator:str="###") -> List[str]:
 class DataClass(object):
     #f Class variable properties
     json_prop_types : ClassVar[Dict[str,Optional[type]]] = {}
+    json_edit_types : ClassVar[Dict[str,Set[str]]] = {}
     sql_columns     : ClassVar[List[Tuple[str,type]]] = []
     data_class_type : ClassVar[str] = "DataClass"
     sql_table_name  : ClassVar[str] = "sqltable"
@@ -154,6 +157,30 @@ class DataClass(object):
             yield(result_dict)
             pass
         pass
+    #f edit_json
+    def edit_json(self, editor:Editor, property_edit_type:str="") -> bool:
+        if property_edit_type=="":
+            properties = set(self.json_prop_types.keys())
+            pass
+        elif property_edit_type in self.json_edit_types:
+            properties = self.json_edit_types[property_edit_type]
+            pass
+        else:
+            raise Exception(f"Edit json type {property_edit_type} not known")
+        json_data = self.as_json()
+        keys = list(json_data.keys())
+        for k in keys:
+            if k not in properties:
+                del json_data[k]
+                pass
+            pass
+        json_string = json.dumps(json_data,indent=1)
+        (modified, json_string_edited) = editor.edit_string(json_string)
+        if modified:
+            json_edited = json.loads(json_string_edited)
+            self.from_json(json_edited)
+            pass
+        return modified
     #f All done
     pass
 
@@ -214,6 +241,9 @@ class DataClassSet:
             self.things[uid] = (data, order_by)
             pass
         pass
+    #f __len__
+    def __len__(self):
+        return len(self.things)
     #f iter_ordered
     def iter_ordered(self) -> Iterable[DataClass]:
         l = []

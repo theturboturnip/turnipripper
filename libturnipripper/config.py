@@ -178,7 +178,7 @@ class Config:
     def read_config_files(self, config_files:List[Tuple[bool,Path]]) -> None:
         config = configparser.SafeConfigParser()
         for (required, path) in config_files:
-            read_paths = config.read([path])
+            read_paths = config.read([path.expanduser()])
             if required and read_paths==[]:
                 raise Exception(f"Failed to read configuration file {path}")
             pass

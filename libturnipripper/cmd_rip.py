@@ -89,12 +89,7 @@ class RipCommand(Command):
                 print("Failed to fetch")
                 pass
             pass
-        if self.config.database.primary_is_json():
-            db.write_json_files(self.config.database.json_root)
-            pass
-        else:
-            db.update_sqlite3(db_path=db.joinpath(self.config.database.dbfile))
-            pass
+        db.write()
 
         self.args.verbose_out("info",f"Rip to directory {rip_directory}")
         if rip_directory.exists() and not self.args.rerip:

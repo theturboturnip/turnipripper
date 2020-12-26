@@ -40,6 +40,10 @@ class Disc(DataClass):
         "tracks":None,
         "json_path":None,
     }
+    json_edit_types = {
+        "user":{"album_uniq_id","title","artist","disc_of_set","downloaded_titles","downloaded_artists","tracks"},
+        "user_no_tracks":{"album_uniq_id","title","artist","disc_of_set","downloaded_titles","downloaded_artists"},
+    }
     data_class_type  = "Disc"
     sql_table_name   = "disc"
     sql_columns      = [
@@ -120,6 +124,10 @@ class Disc(DataClass):
         self.postset_downloaded_titles = self.create_output_title
         self.postset_title = self.create_output_title
         pass
+    #f ui_str
+    def ui_str(self) -> str:
+        self.create_output_title()
+        return f"{self.uniq_id}:'{self.output_title}'"
     #f update_from_disc_info
     def update_from_disc_info(self, disc_info:DiscInfo) -> None:
         self.musicbrainz_id     = disc_info.musicbrainz_id.id_as_str()
@@ -238,9 +246,9 @@ class Disc(DataClass):
     def get_title(self) -> str:
         self.create_output_title()
         return self.output_title
-    #f get_track_title
-    def get_track_title(self, track:int) -> str:
-        return self.tracks[track].get_title()
+    #f get_track
+    def get_track(self, track:int) -> "Track":
+        return self.tracks[track]
     #f iter_metadata
     def iter_metadata(self, track:int) -> Iterable[Tuple[str,str]]:
         metadata = self.tracks[track].get_metadata()
@@ -293,6 +301,9 @@ class Track(DataClass):
     disc_uid     : UniqueDiscId
     output_title : str
     disc         : Disc
+    uncompressed_filename_fmt : ClassVar[str] = "track{number:02d}.cdda.wav"
+    compressed_filename_fmt   : ClassVar[str] = "track{number:02d}.flac"
+    encoded_filename_fmt      : ClassVar[str] = "{number:02d} - {title}.{encode_ext}"
     
     #f __init__
     def __init__(self, disc:Disc, number:int):
@@ -311,6 +322,19 @@ class Track(DataClass):
         self.output_title = ""
         self.create_output_title()
         pass
+    #f uncompressed_filename
+    def uncompressed_filename(self) -> str:
+        return self.uncompressed_filename_fmt.format(number=self.number)
+    #f compressed_filename
+    def compressed_filename(self) -> str:
+        return self.compressed_filename_fmt.format(number=self.number)
+    #f encoded_filename
+    def encoded_filename(self, encode_ext:str) -> str:
+        self.create_output_title()
+        return self.encoded_filename_fmt.format( encode_ext=encode_ext,
+                                                 number =self.number,
+                                                 title = self.output_title
+        )
     #f add_download_track_data
     def add_download_track_data(self, dd:Dict[str, Any]) -> None:
         if "title" in dd:

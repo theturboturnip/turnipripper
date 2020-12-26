@@ -33,16 +33,31 @@ class Encoder(object):
         source_path = self.db.joinpath(self.config.rip.joinpath(disc.src_directory))
         output_path = self.db.joinpath(self.config.encode.output_root)
         output_path = output_path.joinpath(Path(disc.src_directory))
-        print(source_path, output_path)
+        if not output_path.exists():
+            output_path.mkdir()
+            pass
+        if not output_path.is_dir():
+            raise Exception("Cannot encode to {output_path] as it is not a directory")
         output_ext = self.output_ext
         if output_ext=="": output_ext=self.output_format
         for i in track_list:
-            input_file = source_path.joinpath(f"track{i+1:02d}.flac")
+            track = disc.get_track(i)
+            input_file = source_path.joinpath(track.compressed_filename())
+            output_file = output_path.joinpath(track.encoded_filename(encode_ext=output_ext))
             if not input_file.is_file(): raise Exception(f"Couldn't find file {input_file}")
-            output_filename = "{track:02d} - {title}.{output_ext}".format(
-                title = disc.get_track_title(i), track = i+1, output_ext = output_ext)
-            # print(output_filename.replace(
-            output_file = output_path.joinpath(output_filename)
+
+            input_file_for_ui  = self.db.relative_path(input_file)
+            output_file_for_ui = self.db.relative_path(output_file)
+            
+            if output_file.is_file():
+                input_file_stat  = input_file.stat()
+                output_file_stat = output_file.stat()
+                if (not force_if_newer) and (output_file_stat.st_mtime > input_file_stat.st_mtime):
+                    print(f"Skipping encode of '{input_file_for_ui}' as '{output_file_for_ui}' is newer (and not forced)")
+                    continue
+                pass
+            pass
+
             ffmpeg_command = ["ffmpeg", "-i", str(input_file), "-c", self.output_format,
                               "-loglevel", "warning",
                               "-hide_banner",
@@ -55,7 +70,7 @@ class Encoder(object):
                 pass
             ffmpeg_command.append(str(output_file))
             try:
-                #print(ffmpeg_command)
+                print(f"Using ffmpeg to encode {input_file_for_ui} to {output_file_for_ui}")
                 completed = subprocess.run(ffmpeg_command)
                 pass
             except:

@@ -382,6 +382,15 @@ class Database(object):
                 return (-1,d)
             pass
         return (len(discs),None)
+    #f write
+    def write(self) -> None:
+        if self.config.primary_is_json():
+            self.write_json_files(self.config.json_root)
+            pass
+        else:
+            self.update_sqlite3(db_path=self.joinpath(self.config.dbfile))
+            pass
+        pass
     #f All done
     pass
 

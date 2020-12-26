@@ -27,6 +27,9 @@ class Album(DataClass):
         "output_title":str,
         "json_path":None
     }
+    json_edit_types = {
+        "user":{"label","title","artist","num_discs","downloaded_titles","downloaded_artists"},
+    }
     sql_columns     : ClassVar[List[Tuple[str,type]]] = [
         ("!uniq_id",str),
         ("label",str),
@@ -111,10 +114,12 @@ class AlbumFilter(DataClassFilter):
     order_keys = {
         "title":"output_title",
         "id":"uniq_id",
+        "musicbrainz":"musicbrainz_release_id",
         }
     filter_keys = {
         "title":("re","output_title"),
         "id":   ("re","uniq_id"),
+        "musicbrainz":("re","musicbrainz_release_id"),
         }
     pass
 
