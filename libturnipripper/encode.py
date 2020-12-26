@@ -16,14 +16,20 @@ class Encoder(object):
     #v Properties
     db : Database
     config : Config
-    output_format : ClassVar[str]="mp3"
-    output_ext    : ClassVar[str]=""
-    extra_options : List[str]
+    output_ext    : ClassVar[str]="mp3"
+    extra_options : Dict[str,str]={
+        "-c:a":"mp3",
+    }
     #f __init__
-    def __init__(self, database:Database, config:Config, extra_options:List[str]=[]) -> None:
+    def __init__(self, database:Database, config:Config, extra_options:List[Tuple[str,str]]=[]) -> None:
         self.db = database
         self.config = config
-        self.extra_options = extra_options
+        self.extra_options = self.extra_options.copy()
+        config_options = self.config.encode.get_encode_options()
+        config_options.extend(extra_options)
+        for (k,v) in config_options:
+            self.extra_options[k] = v
+            pass
         pass
     #f encode
     def encode(self, disc:Disc, track_list:List[int]=[], force_if_newer:bool=False) -> None:
@@ -39,7 +45,6 @@ class Encoder(object):
         if not output_path.is_dir():
             raise Exception("Cannot encode to {output_path] as it is not a directory")
         output_ext = self.output_ext
-        if output_ext=="": output_ext=self.output_format
         for i in track_list:
             track = disc.get_track(i)
             input_file = source_path.joinpath(track.compressed_filename())
@@ -56,14 +61,19 @@ class Encoder(object):
                     print(f"Skipping encode of '{input_file_for_ui}' as '{output_file_for_ui}' is newer (and not forced)")
                     continue
                 pass
-            pass
 
-            ffmpeg_command = ["ffmpeg", "-i", str(input_file), "-c", self.output_format,
+            ffmpeg_command = ["ffmpeg",
+                              "-i", str(input_file),
                               "-loglevel", "warning",
                               "-hide_banner",
                               "-stats",
-                              *self.extra_options,
-                              "-y"]
+                              "-y", # overwrite output files
+            ]
+            for (k,v) in self.extra_options.items():
+                ffmpeg_command.append(k)
+                if v!="": ffmpeg_command.append(v)
+                pass
+
             for (k,v) in disc.iter_metadata(i):
                 ffmpeg_command.append("-metadata")
                 ffmpeg_command.append(f"{k}={v}")

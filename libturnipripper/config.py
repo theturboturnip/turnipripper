@@ -150,10 +150,24 @@ class RipConfig(ConfigSection):
 class EncodeConfig(ConfigSection):
     elements = {
         "output_format":("str",""),
-        "output_root":("path","")
+        "output_root":("path",""),
+        "encode_options":("str",""),
     }
     output_root: Path
     output_format: str
+    encode_options: str
+    def get_encode_options(self) -> List[Tuple[str,str]]:
+        if self.encode_options=="": return []
+        r = []
+        encode_options_list = self.encode_options.split(",")
+        if (len(encode_options_list)&1)==1: raise Exception("Encode options must be even length list")
+        for i in range(len(encode_options_list)//2):
+            k = encode_options_list[i*2]
+            v = encode_options_list[i*2+1]
+            if k[0]!="-": raise Exception(f"Encode options must be -arg,value list - got {k} as an arg")
+            r.append((k,v))
+            pass
+        return r
     pass
                                           
 #c Config
