@@ -6,19 +6,23 @@ from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dic
 #c UniqueId
 T = TypeVar('T', bound='UniqueId')
 class UniqueId:
+    #v Properties
     class_str: ClassVar[str] = ""
     class_last : ClassVar[int] = 0
     uniq_id : int = 0
     uniq_str : str
+    #f update_last
     @classmethod
     def update_last(cls, uniq_id:int) -> None:
-        if uniq_id <= cls.class_last: cls.class_last = uniq_id+1
+        if cls.class_last <= uniq_id: cls.class_last = uniq_id+1
         pass
+    #f get_next
     @classmethod
     def get_next(cls) -> int:
         n = cls.class_last
         cls.update_last(n)
         return n
+    #f __init__
     def __init__(self, uniq_id:Optional[int]=None, uniq_str:Optional[str]=None) -> None:
         if uniq_str is not None:
             self.uniq_str = uniq_str
@@ -35,6 +39,7 @@ class UniqueId:
             self.uniq_str = f"{self.class_str}.{self.uniq_id:04d}"
             pass
         pass
+    #f __hash__
     def __hash__(self) -> int: return hash(self.uniq_str)
     def __lt__(self, other:T) -> bool: return self.uniq_str < other.uniq_str
     def __gt__(self, other:T) -> bool: return self.uniq_str > other.uniq_str

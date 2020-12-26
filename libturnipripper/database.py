@@ -131,7 +131,11 @@ class Database(object):
         if pattern is None:
             with base_path.open() as f:
                 json_data = json.load(f)
-                self.add_json(base_path, json_data)
+                try:
+                    self.add_json(base_path, json_data)
+                    pass
+                except Exception as e:
+                    raise Exception(f"Bad json in file {base_path}: {e}")
                 files_read += 1
                 pass
             pass
@@ -139,7 +143,11 @@ class Database(object):
             for p in base_path.glob(pattern):
                 with p.open() as f:
                     json_data = json.load(f)
-                    self.add_json(p, json_data)
+                    try:
+                        self.add_json(p, json_data)
+                        pass
+                    except Exception as e:
+                        raise Exception(f"Bad json in file {p}: {e}")
                     files_read += 1
                     pass
                 pass
@@ -148,12 +156,14 @@ class Database(object):
     #f create_album
     def create_album(self, uniq_id_str:str) -> Album:
         uniq_id = UniqueAlbumId.from_str(uniq_id_str)
+        if uniq_id in self.albums: raise Exception(f"Repeat uniq_id {uniq_id} (hint was '{uniq_id_str}') in creating album")
         album = Album(uniq_id=uniq_id)
         self.albums[uniq_id] = album
         return album
     #f create_disc
     def create_disc(self, uniq_id_str:str) -> Disc:
         uniq_id = UniqueDiscId.from_str(uniq_id_str)
+        if uniq_id in self.discs: raise Exception(f"Repeat uniq_id {uniq_id} (hint was '{uniq_id_str}')in creating disc")
         disc = Disc(uniq_id=uniq_id)
         self.discs[uniq_id] = disc
         return disc

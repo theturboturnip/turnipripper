@@ -219,7 +219,8 @@ class DiscInfo:
         musicbrainz_string = data[0][1:-1]
         self.musicbrainz_id = MusicbrainzID(musicbrainz_string)
         if self.musicbrainz_id.mb_id!=did_mb_id:
-            raise Exception(f"Mismatch in musicbrainz id when reading disc_info (read {did_mb_id} calculated {mb_id})")
+            # raise Exception(f"Mismatch in musicbrainz id when reading disc_info (read {did_mb_id} calculated {self.musicbrainz_id})")
+            pass
         if self.num_tracks==0 or self.num_tracks==self.musicbrainz_id.num_tracks():
             self.tracks = [TrackInfo(i) for i in range(self.num_tracks)]
             for (n,s,e) in self.musicbrainz_id.offset_extents():

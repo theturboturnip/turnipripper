@@ -302,6 +302,7 @@ class Track(DataClass):
     downloaded_artists : str
     disc_uid     : UniqueDiscId
     output_title : str
+    output_artist : str
     disc         : Disc
     uncompressed_filename_fmt : ClassVar[str] = "track{number:02d}.cdda.wav"
     compressed_filename_fmt   : ClassVar[str] = "track{number:02d}.flac"
@@ -322,6 +323,7 @@ class Track(DataClass):
         self.downloaded_artists = ""
         self.postset_number = self.create_output_title
         self.output_title = ""
+        self.output_artist = ""
         self.create_output_title()
         pass
     #f uncompressed_filename
