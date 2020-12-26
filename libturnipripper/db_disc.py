@@ -274,9 +274,11 @@ class Track(DataClass):
         "sectors":int,
         "length_seconds":int,
         "title":str,
-        "output_title":str,
         "downloaded_titles":str,
+        "output_title":str,
+        "artist":str,
         "downloaded_artists":str,
+        "output_artist":str,
     }
     sql_table_name  = "tracks"
     sql_columns     = [
@@ -286,7 +288,7 @@ class Track(DataClass):
         ("sectors",int),
         ("length_seconds",int),
         ("title",str),
-        ("output_title",str),
+        ("arist",str),
         ("downloaded_titles",str),
         ("downloaded_artists",str),
         ]
