@@ -86,6 +86,7 @@ class Disc(DataClass):
     downloaded_titles : str
     downloaded_artists : str
     output_title : str
+    output_artist : str
     album         : Optional[Album]
     tracks        : List["Track"]
     json_path     : Path
@@ -121,12 +122,15 @@ class Disc(DataClass):
         self.json_path = Path()
         self.output_title = ""
         self.postset_num_tracks = self.update_track_list
-        self.postset_downloaded_titles = self.create_output_title
-        self.postset_title = self.create_output_title
+        self.postset_downloaded_titles = self.create_outputs
+        self.postset_title = self.create_outputs
+        self.postset_artists = self.create_outputs
+        self.postset_downloaded_artists = self.create_outputs
+        self.create_outputs()
         pass
     #f ui_str
     def ui_str(self) -> str:
-        self.create_output_title()
+        self.create_outputs()
         return f"{self.uniq_id}:'{self.output_title}'"
     #f update_from_disc_info
     def update_from_disc_info(self, disc_info:DiscInfo) -> None:
@@ -176,7 +180,7 @@ class Disc(DataClass):
             self.tracks = self.tracks[:self.num_tracks]
             pass
         for t in self.tracks:
-            t.create_output_title()
+            t.create_outputs()
             pass
         pass
     #f disc_of_set_str
@@ -195,7 +199,7 @@ class Disc(DataClass):
             self.tracks.append(track)
             pass
         for t in self.tracks:
-            t.create_output_title()
+            t.create_outputs()
             pass
         pass
     #f as_json_tracks
@@ -229,31 +233,45 @@ class Disc(DataClass):
         if self.tracks[number-1].number != number: raise Exception(f"Bad track numbering {number} vs {self.tracks[number-1].number}")
         self.tracks[number-1].add_download_track_data(dd)
         pass
-            
-    #f create_output_title
-    def create_output_title(self) -> None:
+    #f create_outputs
+    def create_outputs(self) -> None:
         if self.title!="":
             self.output_title = self.title
             pass
         elif self.downloaded_titles!="":
             self.output_title = str_set_as_list(self.downloaded_titles)[0]
             pass
+        elif self.album is not None:
+            self.output_title = self.album.output_title
+            pass
         else:
             self.output_title = f"{self.disc_of_set_str()}"
+            pass
+        if self.artist!="":
+            self.output_artist = self.artist
+            pass
+        elif self.downloaded_artists!="":
+            self.output_artist = str_set_as_list(self.downloaded_artists)[0]
+            pass
+        elif self.album is not None:
+            self.output_artist = self.album.output_artist
+            pass
+        else:
+            self.output_artist = f"Unknown artist"
             pass
         pass
     #f get_title
     def get_title(self) -> str:
-        self.create_output_title()
+        self.create_outputs()
         return self.output_title
     #f get_track
     def get_track(self, track:int) -> "Track":
         return self.tracks[track]
     #f iter_metadata
     def iter_metadata(self, track:int) -> Iterable[Tuple[str,str]]:
-        metadata = self.tracks[track].get_metadata()
+        metadata = self.tracks[track].get_metadata() # title and artist from the track
         metadata["album"] = self.output_title
-        metadata["album_artist"] = self.artist
+        metadata["album_artist"] = self.output_artist
         metadata["track"] = f"{track+1}/{self.num_tracks}"
         if self.album is not None and self.album.num_discs>1:
             metadata["disc"] = f"{self.disc_of_set}/{self.album.num_discs}"
@@ -306,7 +324,7 @@ class Track(DataClass):
     disc         : Disc
     uncompressed_filename_fmt : ClassVar[str] = "track{number:02d}.cdda.wav"
     compressed_filename_fmt   : ClassVar[str] = "track{number:02d}.flac"
-    encoded_filename_fmt      : ClassVar[str] = "{number:02d} - {title}.{encode_ext}"
+    encoded_filename_fmt      : ClassVar[str] = "{opt_disc_of_set}{number:02d} - {title}.{encode_ext}"
     
     #f __init__
     def __init__(self, disc:Disc, number:int):
@@ -321,10 +339,10 @@ class Track(DataClass):
         self.artist = ""
         self.downloaded_titles = ""
         self.downloaded_artists = ""
-        self.postset_number = self.create_output_title
+        self.postset_number = self.create_outputs
         self.output_title = ""
         self.output_artist = ""
-        self.create_output_title()
+        self.create_outputs()
         pass
     #f uncompressed_filename
     def uncompressed_filename(self) -> str:
@@ -334,10 +352,15 @@ class Track(DataClass):
         return self.compressed_filename_fmt.format(number=self.number)
     #f encoded_filename
     def encoded_filename(self, encode_ext:str) -> str:
-        self.create_output_title()
+        self.create_outputs()
+        opt_disc_of_set = ""
+        if self.disc.album is not None:
+            opt_disc_of_set = f"{self.disc.disc_of_set:02d}_"
+            pass
         return self.encoded_filename_fmt.format( encode_ext=encode_ext,
                                                  number =self.number,
-                                                 title = self.output_title
+                                                 title = self.output_title,
+                                                 opt_disc_of_set = opt_disc_of_set,
         )
     #f add_download_track_data
     def add_download_track_data(self, dd:Dict[str, Any]) -> None:
@@ -356,10 +379,10 @@ class Track(DataClass):
         if "sectors" in dd:
             self.sectors = dd["sectors"]
             pass
-        self.create_output_title()
+        self.create_outputs()
         pass
-    #f create_output_title
-    def create_output_title(self) -> None:
+    #f create_outputs
+    def create_outputs(self) -> None:
         if self.title!="":
             self.output_title = self.title
             pass
@@ -372,16 +395,29 @@ class Track(DataClass):
         else:
             self.output_title = f"Track {self.number} of {self.disc.num_tracks}{self.disc.disc_of_set_str()}"
             pass
+
+        if self.artist!="":
+            self.output_artist = self.artist
+            pass
+        elif self.downloaded_artists!="":
+            self.output_artist = str_set_as_list(self.downloaded_artists)[0]
+            pass
+        elif self.disc is None:
+            self.output_artist = f"Unknown artist"
+            pass
+        else:
+            self.output_artist = self.disc.output_artist
+            pass
         pass
     #f get_title
     def get_title(self) -> str:
-        self.create_output_title()
+        self.create_outputs()
         return self.output_title
     #f get_metadata
     def get_metadata(self) -> Dict[str,str]:
-        self.create_output_title()
+        self.create_outputs()
         metadata = {"title":self.output_title,
-                    "artist":"self.artist",
+                    "artist":self.output_artist,
             }
         return metadata        
     #f __str__

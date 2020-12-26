@@ -69,11 +69,13 @@ class Album(DataClass):
         self.num_discs = 0
         self.downloaded_titles = ""
         self.downloaded_artists = ""
-        self.postset_title = self.create_output_title
-        self.postset_downloaded_titles = self.create_output_title
+        self.postset_title = self.create_outputs
+        self.postset_downloaded_titles = self.create_outputs
+        self.postset_artists = self.create_outputs
+        self.postset_downloaded_artists = self.create_outputs
         self.json_path = Path()
         self.output_title = ""
-        self.create_output_title()
+        self.create_outputs()
         pass
     #f as_json_json_path
     def as_json_json_path(self, v:Path) -> str:
@@ -92,10 +94,10 @@ class Album(DataClass):
         if "title" in dd:  self.downloaded_titles = str_add_to_set(self.downloaded_titles, dd["title"])
         if "artist" in dd: self.downloaded_artists = str_add_to_set(self.downloaded_artists, dd["artist"])
         if "musicbrainz_release_id" in dd: self.musicbrainz_release_id = dd['musicbrainz_release_id']
-        self.create_output_title()
+        self.create_outputs()
         pass
-    #f create_output_title
-    def create_output_title(self) -> None:
+    #f create_outputs
+    def create_outputs(self) -> None:
         if self.title!="":
             self.output_title = self.title
             pass
