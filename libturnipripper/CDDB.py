@@ -51,7 +51,11 @@ def query(track_info, server_url,
           (server_url, query_str, user, host, client_name,
            client_version, proto)
 
-    response = urllib.request.urlopen(url)
+    try:
+        response = urllib.request.urlopen(url)
+        pass
+    except Exception as e:
+        raise Exception(f"Failed in cddb query '{url}': {e}")
 
     # Four elements in header: status, category, disc-id, title
     header = decode_string(response.readline(), expected_output_encodings).split(' ', 3)
@@ -208,7 +212,12 @@ class Interface:
     def read_cddb_track_info(self, cddb_cd_info):
         return read(cddb_cd_info["category"], cddb_cd_info["disc_id"], self.server.address, self.user, self.host, self.client_name, self.client_version, expected_output_encodings=self.server.encodings)[1]
     def read(self, disc_info, cddb_cd_info):
-        return data.CDInfo(self.server.dtitle_pattern, disc_info, self.read_cddb_track_info(cddb_cd_info))
+        try:
+            info = data.CDInfo(self.server.dtitle_pattern, disc_info, self.read_cddb_track_info(cddb_cd_info))
+            pass
+        except Exception as e:
+            raise Exception(f"Failed to create CDInfo from {disc_info} and {cddb_cd_info}: {e}")
+        return info
 
 # CDDB Functions
 def get_cddb_cd_info(cddb_interface, disc_info):

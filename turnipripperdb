@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+
+"""turnipripperdb is a CD ripping system with a database of albums and discs.
+It provides downloading of cddb ID CD data and musicbrainz CD data to create the database.
+It uses cdparanoia, cd-discid, and ffmpeg.
+It requires a configuration file to specify the database; this actually uses ~/.turnipripperdb,
+./.turnipripperdb, and a command line parameter to specify a list of configuration files.
+
+CDs are ripped into a 'source' directory, stored losslessly compressed using flac.
+
+The database has albums, which are collections of discs; discs, which
+are instances of CDs; and tracks, which are the tracks of a particular
+disc.
+The database has ripped data, internet-provided data (downloaded_*), user-provided data, and generated data.
+Lists in the database - when requires as strings - are list elements joined with ###
+
+Each album in the database has a unique identifier, which can be
+something human-sensible, or may be something like album.0000.
+Then the album has a list of downloaded_titles and downloaded_artists.
+It has user provided title and artist - if these are blank, then the first downloaded items will be used.
+It has a number of discs - one for a single disc album.
+It may have a musicbrainz_release_id, which identifies the album release in muscibrainz
+
+Each disc in the database has a unique identifier, which can be
+something human-sensible, or may be something like disc.0000.
+It has an album unique id - which may be blank, but if not it specifies the album to which the disc belongs.
+It has a list of downloaded_titles and downloaded_artists.
+It has user provided title and artist - if these are blank, then the first downloaded items will be used.
+It has a disc number within a set - if an album unique id is provided, then this should be between 1 and the number of discs in the album.
+It may have a musicbrainz_id, muscibrainz_string and muscibrainz_release_id.
+It may have a cddb_id and cddb_string.
+It should have a total_length in seconds - this is from the number of sectors between the start of the first track and the end of the last track, divided by 75 and rounded up - CDs have 75 sectors per second.
+It should have a list of tracks, each of which is a track N of the disc unique id.
+
+Each track in the database belongs to a uniqued disc ID and has a number from 1 to disc.num_tracks.
+The tracks contain CD information - offset sector number and nunmber of sectors, from which a length_seconds is derived.
+It has a list of downloaded_titles and downloaded_artists.
+It has user provided title and artist - if these are blank, then the first downloaded items will be used, or data derived from the disc title.
+
+
+The database is stored as:
+
+1. Json in either a single file, or with a toplevel albums Json file
+and a single Json file for each disc (usually in the ripped source
+directory for the disc)
+
+or 2. an Sqlite3 database (with less support...)
+
+The configuration file has the following sections and keys:
+
+[database]
+root = <root path where all Json/database/source files live>
+dbfile = <default name of sqlite database, if used>
+json_root = <name of toplevel json file, within <root>>
+json_disc = <name of json file within each rip directory - if none then monolithic JSON is the default>
+json_paths = <list of globs of files which must encompass all possible json files>
+primary = <json | sqlite3>
+
+[rip]
+source_root=<directory wherein CD rip directories reside>
+
+[encode]
+output_format=<mp3>
+output_root=<directory wherein directories of encoded files reside>
+encode_options=<extra ffmpeg options - comma separated - to use on encoding>
+
+The turnipripperdb command can be provided with:
+
+--verbose <0-5> : verbosity level
+--debug   <0-5> : debug level
+--config_file <file> : configuration file for the database (extends the default ~/.turnipripperdb and ./.turnipripperdb list)
+
+The subcommands are config, database, album, disc and rip. Each has further subcommands
+
+turnipripperdb config show - displays the complete database configuration
+turnipripperdb database init - initializes a *new* database based on the configuration
+turnipripperdb database export --format <json|sqlite3> --file <filename> - export the database
+turnipripperdb album --id <> --title <> --musicbrainz <> --order_by <> --max_albums <> *subcommand* - filter the albums in the database and run subcommand
+turnipripperdb disc --id <> --title <> --musicbrainz <> --cddbb <> --order_by <> --max_discs <> [--include_tracks] *subcommand* - filter the discs in the database and run subcommand
+turnipripperdb rip --device <> --uniq_id <> [--no_musicbrainz] [--no_cddb] [--read_disc_info] [--rerip] <rip diretory> - rip from a CD, or potentially importing a preripped directory
+
+turnipripperdb album list - list the selected albums (ignoring max_albums) using order_by
+turnipripperdb album json - output a json list for the selected albums (ignoring max_albums) using order_by
+turnipripperdb album edit - edit (in EDITOR) the json for the selected albums one at a time
+
+turnipripperdb disc list - list the selected discs (ignoring max_discs) using order_by
+turnipripperdb disc json - output a json list for the selected discs (ignoring max_discs) using order_by
+turnipripperdb disc edit - edit (in EDITOR) the json for the selected discs one at a times; if --include-tracks is provided then allows tracks to be edited too
+turnipripperdb disc encode [--force] - encode the disc using the configuration encoder; only overwrite current files if older than source files, unless --force is provided
+
+turnipripperdb album and turnipripperdb disc use filters to select the entries from the database.
+id is a regular expression filter on the unique id for the album/disc
+title is a regular expression filter on the output title for the album/disc
+musicbrainz is a regular expression filter on the musicbrainz release id for an album, or the musicbrainz disc id for a disc.
+cddb is a regular expression filter on the cddb id for a disc.
+
+To import a previous turnripripper directory:
+turnipripperdb rip --uniq_id <> [--no_musicbrainz] [--no_cddb] --read_disc_info --rerip <rip directory>
+
+"""
+
+#a Imports
+from libturnipripper.config import Config
+from libturnipripper.cmd_toplevel import ToplevelCommand
+from pathlib import Path
+import argparse
+import sys
+import traceback
+
+import typing
+from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
+
+#a Main
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    cmd = ToplevelCommand(parser)
+    cmd.parse_args()
+
+    config_files = [(False,Path("~/.turnipripperdb")),
+                    (False,Path("./.turnipripperdb")),
+    ]
+    if cmd.args.config_file: config_files.append((True,Path(cmd.args.config_file)))
+    config = Config()
+    try:
+        config.read_config_files(config_files)
+        cmd.invoke(config)
+        pass
+    except Exception as e:
+        if cmd.args.debug_test("any"):
+            traceback.print_exc()
+            pass
+        else:
+            print(e)
+            pass
+        sys.exit(4)
+    pass
+
+if __name__ == "__main__":
+    main()

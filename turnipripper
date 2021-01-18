@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 
+"""
+Concept:
+
+rip <device> <disc name guess> <src directory>
+metadata_edit <src directory>
+encode <src directory>
+
+"""
+
 import libturnipripper.CDDB
 import libturnipripper.data
 import libturnipripper.ripping
 import configparser
 import argparse
 import re
+import os.path
 
 class NamedRegex:
     def __init__(self, name, pattern):
@@ -59,8 +69,7 @@ def number_range_input(query, range_min = 0, range_max = -1):
         return int_answer
             
             
-def select_cd_info_with_user_input(cddb_interfaces):
-    disc_info = libturnipripper.data.get_disc_info()
+def select_cd_info_with_user_input(disc_info, cddb_interfaces):
 
     # Array of arrays of data.CDInfo. known_definitions[X][Y] is the Xth interface's Yth definition for this CD.
     known_definitions = []
@@ -94,10 +103,10 @@ def select_cd_info_with_user_input(cddb_interfaces):
     has_any_definitions = False
     base_definition = None
     for (index, cddb_interface) in enumerate(cddb_interfaces):
-        print ("Querying CD definitions from {}...".format(cddb_interface.server.address))
+        print ("Querying CD definitions for {} from {}...".format(disc_info, cddb_interface.server.address))
         known_definitions.append(libturnipripper.CDDB.get_cd_info(cddb_interface, disc_info))
         if known_definitions[index] == None or len(known_definitions[index]) == 0:
-            print("No definitions for CD ID {0} on {1}, searching next server...".format(disc_info.id, cddb_interface.server.address))
+            print("No definitions for CD ID {0} on {1}, searching next server...".format(disc_info.cddb_id, cddb_interface.server.address))
             continue
         elif len(known_definitions[index]) == 1:
             has_any_definitions = True
@@ -209,6 +218,14 @@ def main():
                              help="Set the location of the ffmpeg binary")
     parser.add_argument("-fargs", "--ffmpeg_args", type=str, action="append", default=[],
                              help="Set any extra arguments for the ffmpeg transcoding. Can be used to set quality level or similar")
+    parser.add_argument("--rip_only", action="store_true", default=False,
+                             help="Set to only rip and generate flac - does not request track info, forces output_format of none")
+    parser.add_argument("--rerip", action="store_true", default=False,
+                             help="Set if attempting to rip a CD already ripped before")
+    parser.add_argument("--device", type=str, default="/dev/cdrom",
+                             help="Use <device> rather than /dev/cdrom")
+    parser.add_argument("--from_source", type=str, default="",
+                             help="Don't fetch from <device>, but use pre-ripped source")
     parser.set_defaults(**defaults)
     args = parser.parse_args(remaining_argv)
 
@@ -239,16 +256,36 @@ def main():
     # FreeDB is always used as a fallback, but we tell the user if they haven't specified 
     servers.append(libturnipripper.CDDB.Server("http://freedb.freedb.org/~cddb/cddb.cgi"))
 
+    # Get disc_info from cdrom OR source directory specified
+    if args.from_source=="":
+        disc_info = libturnipripper.data.get_disc_info(args.device)
+        pass
+    else:
+        disc_info = libturnipripper.data.read_disc_info_from_source(args.source_root_folder, args.from_source)
+        pass
     cddb_interfaces = [libturnipripper.CDDB.Interface(server, args.protocol, args.username, "host") for server in servers]
-    cd_info = select_cd_info_with_user_input(cddb_interfaces)
-    if not cd_info:
-        return
+
+    # Get CD info unless riponly
+    print(f"TurnipRipper ripping disc id {disc_info.cddb_id}")
+    if args.rip_only:
+        cd_info = None
+        args.output_format = None
+        pass
+    else:
+        cd_info = select_cd_info_with_user_input(disc_info, cddb_interfaces)
+        if not cd_info:
+            return
+        pass
+    
     if args.output_format == "none" or args.output_format == None:
         print ("Transcoding disabled, only ripping")
-        libturnipripper.ripping.rip_to_subdir(cd_info, args.source_root_folder, args.ffmpeg)
+        source_directory = libturnipripper.ripping.rip_directory(args.source_root_folder, disc_info)
+        if os.path.exists(source_directory) and not args.rerip:
+            raise Exception(f"Path {source_directory} already exists and not a rerip")
+        libturnipripper.ripping.rip_to_subdir(disc_info, None, args.device, args.source_root_folder, args.ffmpeg, force_overwrite=True)
     else:
         print("Ripping and transcoding to {}".format(args.output_format))
-        libturnipripper.ripping.rip_and_transcode(cd_info, args.source_root_folder, args.library_root_folder, args.output_format, ffmpeg=args.ffmpeg, extra_options=args.ffmpeg_args, output_ext = args.output_extension)
+        libturnipripper.ripping.rip_and_transcode(disc_info, cd_info, args.device, args.source_root_folder, args.library_root_folder, args.output_format, ffmpeg=args.ffmpeg, extra_options=args.ffmpeg_args, output_ext = args.output_extension)
         
 if __name__ == "__main__":
     main()
