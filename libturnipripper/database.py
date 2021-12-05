@@ -59,6 +59,7 @@ class Database(object):
             if config.dbfile is None: raise DatabaseConfigError("Database has a primary of sqlite but no dbfile")
             db.read_sqlite3(db_path=db.joinpath(config.dbfile))
             pass
+        db.resolve_data()
         return db
     #f joinpath
     def joinpath(self, *paths:Any) -> Path:
@@ -105,33 +106,34 @@ class Database(object):
             album_id_str = d["uniq_id"]
             del d["uniq_id"]
             album = self.find_or_create_album(album_id_str, permit_duplicates=False)
-            album.from_json(d)
+            album.from_json(d, False)
             pass
         sql3_conn.commit()
         for d in Disc.sql3_iter_entries(sql3_cursor):
             disc_id_str = d["uniq_id"]
             del d["uniq_id"]
             disc = self.find_or_create_disc(disc_id_str, permit_duplicates=False)
-            disc.from_json(d)
+            disc.from_json(d, False)
             pass
         for t in Track.sql3_iter_entries(sql3_cursor):
             t_disc_id_str = t["disc_uid"]
             del t["disc_uid"]
             t_disc = self.find_disc_id(t_disc_id_str)
             if t_disc is None: raise Exception("Unknown disc id for track")
-            t_disc.tracks[t["number"]-1].from_json(t)
+            t_disc.tracks[t["number"]-1].from_json(t, False)
             pass
         sql3_conn.commit()
         sql3_conn.close()
         pass
     #f read_json_files
     def read_json_files(self, pattern:Optional[str]=None, subpaths:List[str]=[]) -> int:
+        print(pattern)
         files_read = 0
         base_path = self.joinpath(*subpaths)
         if pattern is None:
             with base_path.open() as f:
-                json_data = json.load(f)
                 try:
+                    json_data = json.load(f)
                     self.add_json(base_path, json_data)
                     pass
                 except Exception as e:
@@ -142,8 +144,8 @@ class Database(object):
         else:
             for p in base_path.glob(pattern):
                 with p.open() as f:
-                    json_data = json.load(f)
                     try:
+                        json_data = json.load(f)
                         self.add_json(p, json_data)
                         pass
                     except Exception as e:
@@ -153,6 +155,15 @@ class Database(object):
                 pass
             pass
         return files_read
+    #f resolve_data
+    def resolve_data(self) -> None:
+        for (album_id, album) in self.iter_albums():
+            album.resolve_data()
+            pass
+        for (disc_id, disc) in self.iter_discs():
+            disc.resolve_data()
+            pass
+        pass
     #f create_album
     def create_album(self, uniq_id_str:str) -> Album:
         uniq_id = UniqueAlbumId.from_str(uniq_id_str)
@@ -188,14 +199,14 @@ class Database(object):
         if "albums" in json_dict:
             for (k,v) in json_dict["albums"].items():
                 album = self.find_or_create_album(k, permit_duplicates=permit_duplicates)
-                album.from_json(v)
+                album.from_json(v, False)
                 album.set_json_path(self.relative_path(json_path))
                 pass
             pass
         if "discs" in json_dict:
             for (k,v) in json_dict["discs"].items():
                 disc = self.find_or_create_disc(k, permit_duplicates=permit_duplicates)
-                disc.from_json(v)
+                disc.from_json(v, False)
                 disc.set_json_path(self.relative_path(json_path))
                 disc_album = self.album_of_disc(disc)
                 disc.set_album(disc_album)
@@ -284,6 +295,10 @@ class Database(object):
                 pass
             if must_write:
                 print(f"Must write {path} as its data is modified")
+                path_dir = path.parent
+                if not path_dir.exists():
+                    path_dir.mkdir()
+                    pass
                 with path.open("wb") as f:
                     f.write(json_str)
                     pass

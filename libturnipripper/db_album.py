@@ -48,6 +48,8 @@ class Album(DataClass):
     artist    : str
     title     : str
     num_discs : int
+    discs     : Dict[int, int]
+    disc_offsets : List[int]
     musicbrainz_release_id:str # Should be a unique value for each album, but might not be
     downloaded_titles : str
     downloaded_artists : str
@@ -67,6 +69,8 @@ class Album(DataClass):
         self.title = ""
         self.musicbrainz_release_id = ""
         self.num_discs = 0
+        self.discs = {}
+        self.disc_offsets = []
         self.downloaded_titles = ""
         self.downloaded_artists = ""
         self.postset_title = self.create_outputs
@@ -77,6 +81,37 @@ class Album(DataClass):
         self.output_title = ""
         self.create_outputs()
         pass
+    #f add_disc
+    def add_disc(self, disc:Any, disc_of_set:int, num_tracks:int) -> None:
+        if disc_of_set in self.discs:
+            print(f"Duplicate disc of set {disc_of_set} for album {self.uniq_id}; new is {disc.uniq_id}")
+            pass
+        self.discs[disc_of_set] = num_tracks
+        pass
+    #f resolve_data
+    def resolve_data(self) -> None:
+        self.disc_offsets = []
+        k = list(self.discs.keys())
+        k.sort()
+        last = 0
+        while k != []:
+            disc_of_set = k.pop(0)
+            while disc_of_set > len(self.disc_offsets):
+                self.disc_offsets.append(last)
+                pass
+            if disc_of_set == len(self.disc_offsets):
+                last += self.discs[disc_of_set]
+                self.disc_offsets.append(last)
+                pass
+            pass
+        # print(f"Resolve album {self.uniq_id}, {self.disc_offsets}")
+        self.create_outputs()
+        pass
+    #f track_offset_and_total
+    def track_offset_and_total(self, disc_of_set:int) -> Optional[Tuple[int, int]]:
+        if (disc_of_set > 0) and (disc_of_set < len(self.disc_offsets)):
+            return (self.disc_offsets[disc_of_set-1], self.disc_offsets[-1])
+        return None
     #f as_json_json_path
     def as_json_json_path(self, v:Path) -> str:
         return str(v)

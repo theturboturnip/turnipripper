@@ -17,6 +17,7 @@ from .config import Config
 #c DiscArgs
 class DiscArgs(CommandArgs):
     id:str
+    artist:str
     title:str
     cddb:str
     musicbrainz:str
@@ -28,6 +29,7 @@ class DiscArgs(CommandArgs):
         if self.order_by!="":    filter.order_by(self.order_by)
         if self.id!="":    filter.add_filter("id", self.id)
         if self.title!="": filter.add_filter("title", self.title)
+        if self.artist!="": filter.add_filter("artist", self.artist)
         if self.musicbrainz!="": filter.add_filter("musicbrainz", self.musicbrainz)
         if self.cddb!="":        filter.add_filter("cddb", self.cddb)
         return filter
@@ -40,6 +42,9 @@ class DiscEncodeArgs(DiscArgs):
     
 #c DiscShowCommand
 class DiscShowCommand(Command):
+    """
+    Parent of JSON, List and edit commands
+    """
     #v Properties
     args_class = DiscArgs
     args       : DiscArgs
@@ -106,9 +111,7 @@ class DiscListCommand(DiscShowCommand):
     def show(self, db:Database, discs:DiscSet) -> None:
         for disc in discs.iter_ordered():
             disc = cast(Disc,disc)
-            disc_json = disc.as_json()
-            if not self.args.include_tracks: del disc_json["tracks"]
-            print(disc.uniq_id,disc_json)
+            disc.display(self.args.include_tracks,"")
             pass
         pass
     #f All done
@@ -151,6 +154,7 @@ class DiscCommand(Command):
         ("--cddb",):{"type":str, "default":"", "help":"Regular expression to match cddb_id with"},
         ("--musicbrainz",):{"type":str, "default":"", "help":"Regular expression to match musicbrainz id with"},
         ("--title",):{"type":str, "default":"", "help":"Regular expression to match title with"},
+        ("--artist",):{"type":str, "default":"", "help":"Regular expression to match artist with"},
         ("--order_by",):{"type":str, "default":"", "help":"How to order the output"},
         ("--include_tracks",):{"action":"store_true", "default":False, "help":"Include tracks in output"},
         ("--max_discs",):{"type":int, "default":1, "help":"Maximum number of discs to encode"},

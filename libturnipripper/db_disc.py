@@ -34,6 +34,8 @@ class Disc(DataClass):
         "disc_of_set":int,
         "downloaded_titles":str,
         "downloaded_artists":str,
+        "album_track_offset":int,
+        "album_total_tracks":int,
         "rip_data":str,
         "rip_date":str,
         "rip_time":str,
@@ -62,6 +64,8 @@ class Disc(DataClass):
         ("disc_of_set",int),
         ("downloaded_titles",str),
         ("downloaded_artists",str),
+        ("album_track_offset",int),
+        ("album_total_tracks",int),
         ("rip_data",str),
         ("rip_date",str),
         ("rip_time",str),
@@ -80,6 +84,8 @@ class Disc(DataClass):
     musicbrainz_release_id : str # Musicbrainz 'release' id (e.g. 211ce24f-6de3-4f3c-a62c-7c3b0eff7569) of the album that this disc is part of), if known
     total_length : int
     disc_of_set  : int
+    album_track_offset : int
+    album_total_tracks : int
     rip_data : str
     rip_date : str
     rip_time : str
@@ -114,6 +120,8 @@ class Disc(DataClass):
         self.disc_of_set = 1
         self.downloaded_artists = ""
         self.downloaded_titles = ""
+        self.album_track_offset = 0
+        self.album_total_tracks = 0
         self.rip_data = ""
         self.rip_date = ""
         self.rip_time = ""
@@ -161,6 +169,7 @@ class Disc(DataClass):
     #f set_json_path
     def set_json_path(self, json_path:Path) -> None:
         self.json_path=json_path
+        pass
     #f set_album
     def set_album(self, album:Optional[Album]=None) -> None:
         self.album = album
@@ -168,8 +177,20 @@ class Disc(DataClass):
             self.album_uniq_id = ""
             pass
         else:
+            album.add_disc(self, self.disc_of_set, self.num_tracks)
             self.album_uniq_id = str(album.uniq_id)
             pass
+        pass
+    #f resolve_data
+    def resolve_data(self) -> None:
+        if self.album is not None and self.album.num_discs>1:
+            track_offset_and_total = self.album.track_offset_and_total(self.disc_of_set)
+            if track_offset_and_total is not None:
+                self.album_track_offset = track_offset_and_total[0]
+                self.album_total_tracks = track_offset_and_total[1]
+                pass
+            pass
+        self.create_outputs()
         pass
     #f update_track_list
     def update_track_list(self) -> None:
@@ -273,13 +294,35 @@ class Disc(DataClass):
         metadata["album"] = self.output_title
         metadata["album_artist"] = self.output_artist
         metadata["track"] = f"{track+1}/{self.num_tracks}"
+        metadata["tsot"] = f"{track+1:03d}"
         if self.album is not None and self.album.num_discs>1:
             metadata["disc"] = f"{self.disc_of_set}/{self.album.num_discs}"
+            metadata["tsot"] = f"{self.disc_of_set:03d}.{track+1:03d}"
+            if self.album_total_tracks > 0:
+                metadata["track"] = f"{track+1+self.album_track_offset}/{self.album_total_tracks}"
+                pass
             pass
         for (k,v) in metadata.items():
             yield((k,v))
             pass
         pass        
+    #f display
+    def display(self, include_tracks:bool, indent:str) -> None:
+        print(f"{indent}{self.uniq_id}: {self.output_title} - {self.output_artist} {self.num_tracks} tracks")
+        for k in ["title", "artist", "json_path", "src_directory", "disc_of_set", "album_uniq_id", "cddb_id", "musicbrainz_id", "album_total_tracks", "album_track_offset"]:
+            v = getattr(self, k)
+            print(f"{indent}    {k}: {v}")
+            pass
+        if include_tracks:
+            print(f"{indent}    tracks")
+            for i in range(len(self.tracks)):
+                self.tracks[i].display(indent+"        ")
+                pass
+            pass
+        disc_json = self.as_json()
+        #del(disc_json["tracks"])
+        #print(disc_json)
+        pass
     #f All done
     pass
 
@@ -325,7 +368,25 @@ class Track(DataClass):
     uncompressed_filename_fmt : ClassVar[str] = "track{number:02d}.cdda.wav"
     compressed_filename_fmt   : ClassVar[str] = "track{number:02d}.flac"
     encoded_filename_fmt      : ClassVar[str] = "{opt_disc_of_set}{number:02d} - {title}.{encode_ext}"
-    
+    class filename_translation:
+        def __getitem__(self, unicode:int) -> Optional[int]:
+            if unicode<0x20 or unicode==0x7f: return None
+            result = {ord('"'):ord('\''),
+                      ord('*'):ord('+'),
+                      ord('/'):ord('_'),
+                      ord(','):None,
+                      ord(';'):None,
+                      ord(':'):None,
+                      ord('<'):ord('['),
+                      ord('>'):ord(']'),
+                      ord('?'):ord('_'),
+                      ord('\\'):ord('_'),
+                      ord('|'):ord('_'),
+            }.get(unicode, 'X')
+            if result != 'X':
+                return result
+            return unicode
+        pass
     #f __init__
     def __init__(self, disc:Disc, number:int):
         super().__init__()
@@ -357,9 +418,10 @@ class Track(DataClass):
         if self.disc.album is not None:
             opt_disc_of_set = f"{self.disc.disc_of_set:02d}_"
             pass
+        output_title = self.output_title.translate(self.filename_translation())
         return self.encoded_filename_fmt.format( encode_ext=encode_ext,
                                                  number =self.number,
-                                                 title = self.output_title,
+                                                 title = output_title,
                                                  opt_disc_of_set = opt_disc_of_set,
         )
     #f add_download_track_data
@@ -420,7 +482,10 @@ class Track(DataClass):
                     "artist":self.output_artist,
             }
         return metadata        
-    #f __str__
+    #f display
+    def display(self, indent:str) -> None:
+        print(f"{indent}{self}")
+        pass
     def __str__(self) -> str:
         r = f"{self.number}:{self.offset}:{self.sectors}:{self.length_seconds}:{self.downloaded_titles}"
         return r
@@ -431,12 +496,14 @@ class Track(DataClass):
 class DiscFilter(DataClassFilter):
     order_keys = {
         "title":"output_title",
+        "artist":"output_artist",
         "id":"uniq_id",
         "cddb":"cddb_id",
         "musicbrainz":"musicbrainz_id",
         }
     filter_keys = {
         "title":("re","output_title"),
+        "artist":("re","output_artist"),
         "id":   ("re","uniq_id"),
         "cddb": ("re","cddb_id"),
         "musicbrainz": ("re","musicbrainz_id"),

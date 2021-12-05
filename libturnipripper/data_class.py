@@ -46,7 +46,7 @@ class DataClass(object):
         self.ensure_inited()
         pass
     #f set
-    def set(self, **kwargs:Dict[str,Any]) -> None:
+    def set(self, invoke_callbacks:bool, **kwargs:Dict[str,Any]) -> None:
         callbacks:Set[Any] = set()
         for (k,v) in kwargs.items():
             if not hasattr(self, k): raise Exception(f"Cannot set property {k}, it does not exist yet")
@@ -57,7 +57,7 @@ class DataClass(object):
             else:
                 setattr(self, k, v)
                 pass
-            if hasattr(self, "postset_"+k):
+            if invoke_callbacks and hasattr(self, "postset_"+k):
                 callbacks.add(getattr(self, "postset_"+k))
                 pass
             pass
@@ -66,7 +66,7 @@ class DataClass(object):
             pass
         pass
     #f from_json
-    def from_json(self, json:Json) -> None:
+    def from_json(self, json:Json, invoke_callbacks:bool=True) -> None:
         assert type(json)==dict
         json_dict = cast(Dict[str,Any], json)
         set_dict = {}
@@ -81,7 +81,7 @@ class DataClass(object):
                 set_dict[k] = v
                 pass
             pass
-        self.set(**set_dict)
+        self.set(invoke_callbacks, **set_dict)
         pass
     #f as_json
     def as_json(self) -> Json:
@@ -209,7 +209,7 @@ class DataClassFilter:
             raise Exception(f"Unknown filter '{which}'")
         (filter_type, attr) = self.filter_keys[which]
         value_re = re.compile(value)
-        def re_filter(x:object, attr:str=attr, value_re:re.Pattern[str]=value_re) -> bool:
+        def re_filter(x:object, attr:str=attr, value_re=value_re) -> bool:
             return value_re.search(str(getattr(x,attr))) != None
         self.filters.append(re_filter)
         pass

@@ -28,11 +28,11 @@ class RipCommand(Command):
     parser_args = {
         ("--device",):{"type":str, "default":"/dev/cdrom", "help":"Use <device> (default /dev/cdrom)"},
         ("--uniq_id",):{"type":str, "default":"", "help":"Uniqued id for the database for the disc"},
-        ("--rerip",):{"action":"store_true", "default":False, "help":"Re-rip the data from CD even if it has already been stored)"},
+        # ("--rerip",):{"action":"store_true", "default":False, "help":"Re-rip the data from CD even if it has already been stored)"},
         ("--no_musicbrainz",):{"action":"store_true", "default":False, "help":"Do not try to fetch data from musicbrainz"},
         ("--no_cddb",):{"action":"store_true", "default":False, "help":"Do not try to fetch data from cddb"},
         ("--read_disc_info",):{"action":"store_true", "default":False, "help":"Read a disc_info.txt file in the directory rather than scanning the drive)"},
-        ("directory",):{"type":str, "default":"", "nargs":"?", "help":"Use <directory> to store wav/flacc rather than "},
+        ("directory",):{"type":str, "default":"", "nargs":"?", "help":"Use <directory> to store wav/flacc rather than the musicbrainz-id"},
         }
     args_class = RipArgs
     args       : RipArgs
@@ -92,8 +92,8 @@ class RipCommand(Command):
         db.write()
 
         self.args.verbose_out("info",f"Rip to directory {rip_directory}")
-        if rip_directory.exists() and not self.args.rerip:
-            raise Exception(f"Path {rip_directory} already exists and not a rerip")
+        # if rip_directory.exists() and not self.args.rerip:
+        #    raise Exception(f"Path {rip_directory} already exists and not a rerip")
         ripper = Ripper(self.args.device, rip_directory, disc_info)
         ripper.create_directory_if_required()
         disc_info.write_disc_info(rip_directory, force_overwrite=True)
