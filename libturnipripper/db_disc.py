@@ -191,6 +191,9 @@ class Disc(DataClass):
                 pass
             pass
         self.create_outputs()
+        for t in self.tracks:
+            t.create_outputs()
+            pass
         pass
     #f update_track_list
     def update_track_list(self) -> None:
