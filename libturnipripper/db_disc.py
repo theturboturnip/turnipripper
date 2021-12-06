@@ -487,7 +487,7 @@ class Track(DataClass):
         return metadata        
     #f display
     def display(self, indent:str) -> None:
-        print(f"{indent}{self}")
+        print(f"{indent}{self.number}:{self.length_seconds}:{self.output_artist}:{self.output_title}")
         pass
     def __str__(self) -> str:
         r = f"{self.number}:{self.offset}:{self.sectors}:{self.length_seconds}:{self.downloaded_titles}"

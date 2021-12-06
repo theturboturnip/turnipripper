@@ -38,6 +38,7 @@ class DiscArgs(CommandArgs):
 #c DiscEncodeArgs
 class DiscEncodeArgs(DiscArgs):
     force:bool
+    source:str
     pass
     
 #c DiscShowCommand
@@ -125,6 +126,7 @@ class DiscEncodeCommand(Command):
     name = "encode"
     parser_args = {
         ("--force",):{"default":False, "action":"store_true", "help":"Encode even if output files are newer than old"},
+        ("--source",):{"type":str, "default":"", "help":"Prefix to use instead of db config source for files to encode"},
         }
     #f do_command
     def do_command(self) -> None:
@@ -136,7 +138,7 @@ class DiscEncodeCommand(Command):
             pass
         if len(discs)>self.args.max_discs:
             raise Exception(f"Selected {len(discs)} but max_discs was {self.args.max_discs} - increase max_discs, or filter discs down")
-        e = Encoder(db, self.config)
+        e = Encoder(db, self.config, self.args.source)
         for d in discs.iter_ordered():
             print(f"Encoding {d.ui_str()}")
             e.encode(d, force_if_newer=self.args.force)

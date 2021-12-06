@@ -12,6 +12,7 @@ from .cmd_database import DatabaseCommand
 from .cmd_rip      import RipCommand
 from .cmd_album    import AlbumCommand
 from .cmd_disc     import DiscCommand
+from .cmd_musicbrainz import MusicbrainzCommand
 
 import typing
 from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
@@ -49,6 +50,7 @@ class ToplevelCommand(Command):
         RipCommand,
         AlbumCommand,
         DiscCommand,
+        MusicbrainzCommand,
     ]
     pass
 

@@ -77,7 +77,7 @@ class RipCommand(Command):
             pass
         else: # Disc in system but none have same rip directory
             print(matches, opt_disc)
-            raise Exception("Disc may already be in system")
+            raise Exception("Disc may already be in system with a different directory name")
             pass
         disc.update_from_disc_info(disc_info)
         if not self.args.no_musicbrainz:

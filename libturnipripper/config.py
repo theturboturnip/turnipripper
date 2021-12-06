@@ -25,6 +25,7 @@ import typing
 from typing import Iterable, Optional, ClassVar, TypeVar, Type, Union, List, Dict, Tuple, Set, Any, cast
 
 #a Config
+#c ConfigSection
 class ConfigSection:
     #v Properties
     elements : ClassVar[Dict[str,Tuple[str,Any]]] = {}

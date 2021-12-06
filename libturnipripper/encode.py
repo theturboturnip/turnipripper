@@ -16,14 +16,16 @@ class Encoder(object):
     #v Properties
     db : Database
     config : Config
+    source : str # if not empty then the directory to look for data in
     output_ext    : ClassVar[str]="mp3"
     extra_options : Dict[str,str]={
         "-c:a":"mp3",
     }
     #f __init__
-    def __init__(self, database:Database, config:Config, extra_options:List[Tuple[str,str]]=[]) -> None:
+    def __init__(self, database:Database, config:Config, source:str, extra_options:List[Tuple[str,str]]=[]) -> None:
         self.db = database
         self.config = config
+        self.source = source
         self.extra_options = self.extra_options.copy()
         config_options = self.config.encode.get_encode_options()
         config_options.extend(extra_options)
@@ -36,7 +38,12 @@ class Encoder(object):
         if track_list==[]:
             track_list = range(disc.num_tracks)
             pass
-        source_path = self.db.joinpath(self.config.rip.joinpath(disc.src_directory))
+        if self.source == "":
+            source_path = self.db.joinpath(self.config.rip.joinpath(disc.src_directory))
+            pass
+        else:
+            source_path = Path(self.source).joinpath(disc.src_directory)
+            pass
         output_path = self.db.joinpath(self.config.encode.output_root)
         output_path = output_path.joinpath(Path(disc.src_directory))
         if not output_path.exists():

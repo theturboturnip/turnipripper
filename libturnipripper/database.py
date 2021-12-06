@@ -127,7 +127,7 @@ class Database(object):
         pass
     #f read_json_files
     def read_json_files(self, pattern:Optional[str]=None, subpaths:List[str]=[]) -> int:
-        print(pattern)
+        # print(pattern)
         files_read = 0
         base_path = self.joinpath(*subpaths)
         if pattern is None:
@@ -304,7 +304,7 @@ class Database(object):
                     pass
                 pass
             else:
-                print(f"Not writing {path} as its data is unmodified")
+                # print(f"Not writing {path} as its data is unmodified")
                 pass
             pass
         pass
@@ -356,18 +356,21 @@ class Database(object):
             pass
         return album
     #f fetch_mb_disc_data
-    def fetch_mb_disc_data(self, disc:Optional[Disc]=None, disc_id:Optional[str]=None) -> bool:
+    def fetch_mb_disc_data(self, disc:Optional[Disc]=None, disc_id:Optional[str]=None, mb_id:Optional[str]=None) -> bool:
         if disc is None and disc_id is not None:
             disc = self.find_disc_id(disc_id)
             pass
         if disc is None: return False
-        if disc.musicbrainz_id=="": return False
+        if mb_id is None:
+            mb_id = disc.musicbrainz_id
+            pass
+        if mb_id is None or mb_id=="": return False
         try:
-            mb = MusicbrainzRecordings.of_query(disc.musicbrainz_id)
+            mb = MusicbrainzRecordings.of_query(mb_id)
             pass
         except:
             return False
-        pressing = mb.find_pressing(disc.musicbrainz_id)
+        pressing = mb.find_pressing(mb_id)
         if pressing is None: return False
         for (number,dd) in pressing.iter_download_track_data():
             disc.add_download_track_data(number, dd)

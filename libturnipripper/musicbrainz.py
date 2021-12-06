@@ -177,12 +177,16 @@ class MusicbrainzRelease(object):
     mb_release_id:str
     media : List[MusicbrainzMedia]
     artists: List[MusicbrainzArtist]
-   #f __init__
+    #f __init__
     def __init__(self, json:Json) -> None:
         assert type(json)==dict
         json_dict = cast(Dict[str,Any], json)
-        self.country = json_dict['country']
-        self.date    = json_dict['date']
+        # print(json_dict)
+        # print(json_dict.keys())
+        self.country = ""
+        if "country" in json_dict: self.country = json_dict['country']
+        self.date = ""
+        if "date" in json_dict: self.date    = json_dict['date']
         self.title   = json_dict['title']
         self.mb_release_id   = json_dict['id']
         self.media = []
