@@ -27,6 +27,7 @@ class Disc(DataClass):
         "album_uniq_id":str,
         "artist":str,
         "title":str,
+        "genre":str,
         "musicbrainz_string":str,
         "musicbrainz_id":str,
         "musicbrainz_release_id":str,
@@ -43,8 +44,8 @@ class Disc(DataClass):
         "json_path":None,
     }
     json_edit_types = {
-        "user":{"album_uniq_id","title","artist","disc_of_set","downloaded_titles","downloaded_artists","tracks"},
-        "user_no_tracks":{"album_uniq_id","title","artist","disc_of_set","downloaded_titles","downloaded_artists"},
+        "user":{"album_uniq_id","title","artist","genre","disc_of_set","downloaded_titles","downloaded_artists","tracks"},
+        "user_no_tracks":{"album_uniq_id","title","artist","genre","disc_of_set","downloaded_titles","downloaded_artists"},
     }
     data_class_type  = "Disc"
     sql_table_name   = "disc"
@@ -57,6 +58,7 @@ class Disc(DataClass):
         ("album_uniq_id",str),
         ("artist",str),
         ("title",str),
+        ("genre",str),
         ("musicbrainz_string",str),
         ("musicbrainz_id",str),
         ("musicbrainz_release_id",str),
@@ -79,6 +81,7 @@ class Disc(DataClass):
     album_uniq_id : str
     artist        : str
     title         : str
+    genre         : str
     musicbrainz_string : str
     musicbrainz_id : str
     musicbrainz_release_id : str # Musicbrainz 'release' id (e.g. 211ce24f-6de3-4f3c-a62c-7c3b0eff7569) of the album that this disc is part of), if known
@@ -117,6 +120,7 @@ class Disc(DataClass):
         self.musicbrainz_release_id = ""
         self.artist = ""
         self.title  = ""
+        self.genre  = ""
         self.disc_of_set = 1
         self.downloaded_artists = ""
         self.downloaded_titles = ""
@@ -259,6 +263,9 @@ class Disc(DataClass):
         pass
     #f create_outputs
     def create_outputs(self) -> None:
+        if self.genre=="" and self.album is not None:
+            self.genre = self.album.genre
+            pass
         if self.title!="":
             self.output_title = self.title
             pass
@@ -296,6 +303,7 @@ class Disc(DataClass):
         metadata = self.tracks[track].get_metadata() # title and artist from the track
         metadata["album"] = self.output_title
         metadata["album_artist"] = self.output_artist
+        metadata["genre"] = self.genre
         metadata["track"] = f"{track+1}/{self.num_tracks}"
         metadata["tsot"] = f"{track+1:03d}"
         if self.album is not None and self.album.num_discs>1:
@@ -352,7 +360,7 @@ class Track(DataClass):
         ("sectors",int),
         ("length_seconds",int),
         ("title",str),
-        ("arist",str),
+        ("artist",str),
         ("downloaded_titles",str),
         ("downloaded_artists",str),
         ]
@@ -500,6 +508,7 @@ class DiscFilter(DataClassFilter):
     order_keys = {
         "title":"output_title",
         "artist":"output_artist",
+        "genre":"genre",
         "id":"uniq_id",
         "cddb":"cddb_id",
         "musicbrainz":"musicbrainz_id",
@@ -507,6 +516,7 @@ class DiscFilter(DataClassFilter):
     filter_keys = {
         "title":("re","output_title"),
         "artist":("re","output_artist"),
+        "genre":("re","genre"),
         "id":   ("re","uniq_id"),
         "cddb": ("re","cddb_id"),
         "musicbrainz": ("re","musicbrainz_id"),

@@ -20,6 +20,7 @@ class Album(DataClass):
         "label":str,
         "artist":str,
         "title":str,
+        "genre":str,
         "num_discs":int,
         "musicbrainz_release_id":str,
         "downloaded_titles":str,
@@ -35,6 +36,7 @@ class Album(DataClass):
         ("label",str),
         ("artist",str),
         ("title",str),
+        ("genre",str),
         ("num_discs",int),
         ("musicbrainz_release_id",str),
         ("downloaded_titles",str),
@@ -47,6 +49,7 @@ class Album(DataClass):
     label     : str
     artist    : str
     title     : str
+    genre     : str
     num_discs : int
     discs     : Dict[int, int]
     disc_offsets : List[int]
@@ -67,6 +70,7 @@ class Album(DataClass):
         self.label = ""
         self.artist = ""
         self.title = ""
+        self.genre = ""
         self.musicbrainz_release_id = ""
         self.num_discs = 0
         self.discs = {}
@@ -159,11 +163,13 @@ class Album(DataClass):
 class AlbumFilter(DataClassFilter):
     order_keys = {
         "title":"output_title",
+        "genre":"genre",
         "id":"uniq_id",
         "musicbrainz":"musicbrainz_release_id",
         }
     filter_keys = {
         "title":("re","output_title"),
+        "genre":   ("re","genre"),
         "id":   ("re","uniq_id"),
         "musicbrainz":("re","musicbrainz_release_id"),
         }

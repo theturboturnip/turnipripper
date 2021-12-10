@@ -19,6 +19,7 @@ class DiscArgs(CommandArgs):
     id:str
     artist:str
     title:str
+    genre:str
     cddb:str
     musicbrainz:str
     order_by:str
@@ -30,6 +31,7 @@ class DiscArgs(CommandArgs):
         if self.id!="":    filter.add_filter("id", self.id)
         if self.title!="": filter.add_filter("title", self.title)
         if self.artist!="": filter.add_filter("artist", self.artist)
+        if self.genre!="": filter.add_filter("genre", self.genre)
         if self.musicbrainz!="": filter.add_filter("musicbrainz", self.musicbrainz)
         if self.cddb!="":        filter.add_filter("cddb", self.cddb)
         return filter
@@ -156,6 +158,7 @@ class DiscCommand(Command):
         ("--cddb",):{"type":str, "default":"", "help":"Regular expression to match cddb_id with"},
         ("--musicbrainz",):{"type":str, "default":"", "help":"Regular expression to match musicbrainz id with"},
         ("--title",):{"type":str, "default":"", "help":"Regular expression to match title with"},
+        ("--genre",):{"type":str, "default":"", "help":"Regular expression to match genre with"},
         ("--artist",):{"type":str, "default":"", "help":"Regular expression to match artist with"},
         ("--order_by",):{"type":str, "default":"", "help":"How to order the output"},
         ("--include_tracks",):{"action":"store_true", "default":False, "help":"Include tracks in output"},

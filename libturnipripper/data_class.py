@@ -118,19 +118,24 @@ class DataClass(object):
     #f sql3_insert_entry
     def sql3_insert_entry(self, sql3_cursor:Cursor) -> None:
         sql_columns = []
+        sql_column_values = {} # Dict of str -> Any
         for (name,value_type) in self.sql_columns:
             if name[0]=='!': name = name[1:]
             value = getattr(self, name)
             if value_type==int:
                 sql_columns.append( (name,f"{value}") )
+                sql_column_values[name] = value
                 pass
             else:
                 sql_columns.append( (name,f'"{str(value)}"') )
+                sql_column_values[name] = str(value)
                 pass
             pass
         sql_column_names  = ",".join(x[0] for x in sql_columns)
-        sql_column_values = ",".join(x[1] for x in sql_columns)
-        sql3_cursor.execute(f"""REPLACE INTO {self.sql_table_name} ({sql_column_names}) VALUES ({sql_column_values})""")
+        sql_column_coloned_names = ",".join((":"+x[0]) for x in sql_columns)
+        # sql3_cursor.execute(f"""REPLACE INTO {self.sql_table_name} ({sql_column_names}) VALUES ({sql_column_values})""")
+        # print(f"""REPLACE INTO {self.sql_table_name} ({sql_column_names}) VALUES ({sql_column_coloned_names})""", sql_column_values)
+        sql3_cursor.execute(f"""REPLACE INTO {self.sql_table_name} ({sql_column_names}) VALUES ({sql_column_coloned_names})""", sql_column_values)
         pass
     #f sql3_iter_entries
     @classmethod

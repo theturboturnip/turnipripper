@@ -16,6 +16,7 @@ from .config import Config
 class AlbumArgs(CommandArgs):
     id:str
     title:str
+    genre:str
     musicbrainz:str
     order_by:str
     max_albums:int
@@ -24,6 +25,7 @@ class AlbumArgs(CommandArgs):
         if self.order_by!="":    filter.order_by(self.order_by)
         if self.id!="":    filter.add_filter("id", self.id)
         if self.title!="": filter.add_filter("title", self.title)
+        if self.genre!="": filter.add_filter("genre", self.genre)
         if self.musicbrainz!="": filter.add_filter("musicbrainz", self.musicbrainz)
         return filter
     pass
@@ -106,6 +108,7 @@ class AlbumCommand(Command):
     parser_args = {
         ("--id",):{"type":str, "default":"", "help":"Regular expression to match id with"},
         ("--title",):{"type":str, "default":"", "help":"Regular expression to match title with"},
+        ("--genre",):{"type":str, "default":"", "help":"Regular expression to match genre with"},
         ("--musicbrainz",):{"type":str, "default":"", "help":"Regular expression to match musicbrainz release id with"},
         ("--order_by",):{"type":str, "default":"", "help":"How to order the output"},
         ("--max_albums",):{"type":int, "default":1, "help":"Maximum number of albums"},
