@@ -142,6 +142,15 @@ class Album(DataClass):
         else:
             self.output_title = "unknown album"
             pass
+        if self.artist!="":
+            self.output_artist = self.artist
+            pass
+        elif self.downloaded_artists!="":
+            self.output_artist = str_set_as_list(self.downloaded_artists)[0]
+            pass
+        else:
+            self.output_artist = f"Unknown artist"
+            pass
         pass
     #f All done
     pass

@@ -109,9 +109,14 @@ class MusicbrainzMedia(object):
             pass
         self.pressings = []
         if 'discs' in json_dict:
-            for disc_pressing in json_dict['discs']: # disc_pressing may be the one we want!
+            for disc_pressing in json_dict['discs']:
+                # disc_pressing may be the one we want!
                 self.add_pressing(disc_pressing)
                 pass
+            pass
+        if len(self.pressings)==0:
+            disc_pressing = {"offsets":[], "sectors":0, "id":""}
+            self.add_pressing(disc_pressing)
             pass
         pass
     #f add_pressing
@@ -181,8 +186,6 @@ class MusicbrainzRelease(object):
     def __init__(self, json:Json) -> None:
         assert type(json)==dict
         json_dict = cast(Dict[str,Any], json)
-        # print(json_dict)
-        # print(json_dict.keys())
         self.country = ""
         if "country" in json_dict: self.country = json_dict['country']
         self.date = ""
@@ -204,6 +207,9 @@ class MusicbrainzRelease(object):
         pass
     #f find_pressing
     def find_pressing(self, mb_id:str) -> Optional[MusicbrainzDiscPressing]:
+        is_release_id = (len(mb_id)>30) and (mb_id[8]=='-')
+        if is_release_id:
+            return self.media[0].pressings[0]
         for m in self.media:
             r = m.find_pressing(mb_id)
             if r is not None: return r
@@ -249,7 +255,6 @@ class MusicbrainzRecordings(object):
     def __init__(self, json:Json) -> None:
         assert type(json)==dict
         json_dict = cast(Dict[str,Any], json)
-        if 'id' not in json_dict:       raise Exception(f"musicbrainz: expected 'id' in returned data but one was not present")
         if 'releases' not in json_dict: raise Exception(f"musicbrainz: expected 'releases' in returned data but one was not present")
         self.releases = []
         for release in json_dict['releases']:
@@ -259,16 +264,32 @@ class MusicbrainzRecordings(object):
     #f of_query
     @classmethod
     def of_query(cls:Type[T], mb_id:str) -> T:
-        url = f"https://musicbrainz.org/ws/2/discid/{mb_id}?fmt=json&inc=recordings+artist-credits"
+        is_release_id = (len(mb_id)>30) and (mb_id[8]=='-')
+        if is_release_id:
+            url = f"https://musicbrainz.org/ws/2/release/{mb_id}?fmt=json&inc=recordings+artist-credits+aliases+labels+discids"
+            pass
+        else:
+            url = f"https://musicbrainz.org/ws/2/discid/{mb_id}?fmt=json&inc=recordings+artist-credits"
+            pass
         try:
             response = urllib.request.urlopen(url)
             pass
         except Exception as e:
+            print(f"Failed in musicbrainz query '{url}': {e}")
             raise Exception(f"Failed in musicbrainz query '{url}': {e}")
         # Four elements in header: status, category, disc-id, title
         expected_output_encodings=["utf8"]
-        header = response.readline().decode("utf8")
-        return cls(json=json.loads(header))
+        try:
+            header = response.readline().decode("utf8")
+            json_dict = json.loads(header)
+            if is_release_id:
+                json_dict = {"releases":[json_dict]}
+                pass
+            pass
+        except Exception as e:
+            print(f"Failed in musicbrainz query '{url}': {e}")
+            raise Exception(f"Failed in musicbrainz query '{url}': {e}")
+        return cls(json_dict)
     #f find_pressing
     def find_pressing(self, mb_id:str) -> Optional[MusicbrainzDiscPressing]:
         for release in self.releases:

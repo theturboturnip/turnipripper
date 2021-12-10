@@ -67,6 +67,13 @@ class Database(object):
     #f relative_path
     def relative_path(self, path:Path) -> Path:
         return path.relative_to(self.config.root)
+    #f relative_path_if_possible
+    def relative_path_if_possible(self, path:Path) -> Path:
+        try:
+            return path.relative_to(self.config.root)
+        except:
+            pass
+        return path
     #f create_sqlite3
     def create_sqlite3(self, db_path:Path) -> None:
         sql3_conn   = sqlite3.connect(str(db_path))

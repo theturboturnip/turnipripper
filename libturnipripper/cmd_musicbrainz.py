@@ -42,6 +42,7 @@ class MusicbrainzUpdateCommand(Command):
     args       : MusicbrainzArgs
     parser_args = {
         ("--update",):{"default":False, "action":"store_true", "help":"Update the disc downloaded data"},
+        ("mb_id",):{"type":str, "default":"", "nargs":"?", "help":"Musicbrainz release ID or disc ID to fetch"},        
         }
     #f do_command
     def do_command(self) -> None:
@@ -57,7 +58,7 @@ class MusicbrainzUpdateCommand(Command):
             disc = cast(Disc,disc)
             disc.display(True,"")
             pass
-        mb_id = "k1e8Jo9pHIUsOyZKWWdZMfmDMnA-"
+        mb_id = self.args.mb_id
         for d in discs.iter_ordered():
             db.fetch_mb_disc_data(d, mb_id=mb_id)
             pass

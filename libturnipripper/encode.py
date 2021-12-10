@@ -58,8 +58,8 @@ class Encoder(object):
             output_file = output_path.joinpath(track.encoded_filename(encode_ext=output_ext))
             if not input_file.is_file(): raise Exception(f"Couldn't find file {input_file}")
 
-            input_file_for_ui  = self.db.relative_path(input_file)
-            output_file_for_ui = self.db.relative_path(output_file)
+            input_file_for_ui  = self.db.relative_path_if_possible(input_file)
+            output_file_for_ui = self.db.relative_path_if_possible(output_file)
             
             if output_file.is_file():
                 input_file_stat  = input_file.stat()
